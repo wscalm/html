@@ -1,13 +1,13 @@
 # 自動デプロイ
 
-`main` に push すると、GitHub Actions が rsync でさくらVPS（nginx、`/var/www/html`）に配置する。
+`main` に push すると、GitHub Actions が rsync でさくらVPS（nginx、`/var/www/wasowaso.com/html`）に配置する。
 
 | リポジトリ | 配置先 |
 |---|---|
-| wscalm/html | `/var/www/html` |
-| wscalm/booklog | `/var/www/html/booklog` |
-| wscalm/romberg-web | `/var/www/html/romberg` |
-| wscalm/generate-100masu | `/var/www/html/generate-100masu` |
+| wscalm/html | `/var/www/wasowaso.com/html` |
+| wscalm/booklog | `/var/www/wasowaso.com/html/booklog` |
+| wscalm/romberg-web | `/var/www/wasowaso.com/html/romberg` |
+| wscalm/generate-100masu | `/var/www/wasowaso.com/html/generate-100masu` |
 
 - 処理の本体は `html` の `.github/workflows/rsync-deploy.yml`。各リポジトリの `.github/workflows/deploy.yml` はそれを呼ぶだけで、中身はどれも同じ（`html` だけ参照先がローカルパス）。
 - 配置先はサーバーの `authorized_keys` で鍵ごとに固定する。ワークフロー側では指定しない。
@@ -32,8 +32,8 @@ sudo adduser --disabled-password --gecos "" deploy
 sudo install -d -o deploy -g deploy -m 700 /home/deploy/.ssh
 
 # 配置先ディレクトリを用意し、deploy の持ち物にする
-sudo install -d /var/www/html/booklog /var/www/html/romberg /var/www/html/generate-100masu
-sudo chown -R deploy:deploy /var/www/html
+sudo install -d /var/www/wasowaso.com/html/booklog /var/www/wasowaso.com/html/romberg /var/www/wasowaso.com/html/generate-100masu
+sudo chown -R deploy:deploy /var/www/wasowaso.com/html
 
 # rrsync があるか（Ubuntu 24.04 は rsync パッケージに同梱）
 command -v rrsync
@@ -42,10 +42,10 @@ command -v rrsync
 `/home/deploy/.ssh/authorized_keys`（所有者 deploy、パーミッション 600）に、手順1で作った公開鍵（`~/.ssh/deploy-*.pub`）を1行ずつ書く。
 
 ```
-command="rrsync /var/www/html",restrict ssh-ed25519 AAAA... deploy-html
-command="rrsync /var/www/html/booklog",restrict ssh-ed25519 AAAA... deploy-booklog
-command="rrsync /var/www/html/romberg",restrict ssh-ed25519 AAAA... deploy-romberg-web
-command="rrsync /var/www/html/generate-100masu",restrict ssh-ed25519 AAAA... deploy-generate-100masu
+command="rrsync /var/www/wasowaso.com/html",restrict ssh-ed25519 AAAA... deploy-html
+command="rrsync /var/www/wasowaso.com/html/booklog",restrict ssh-ed25519 AAAA... deploy-booklog
+command="rrsync /var/www/wasowaso.com/html/romberg",restrict ssh-ed25519 AAAA... deploy-romberg-web
+command="rrsync /var/www/wasowaso.com/html/generate-100masu",restrict ssh-ed25519 AAAA... deploy-generate-100masu
 ```
 
 `/etc/ssh/sshd_config` で `AllowUsers` を使っている場合は `deploy` を追加して、sshd をリロードする。
@@ -96,7 +96,7 @@ done
 以前の `git pull` で置かれたものは、除外対象なので rsync では消えない。手で消す。
 
 ```bash
-cd /var/www/html
+cd /var/www/wasowaso.com/html
 sudo rm -rf .git README.md \
   booklog/.gitignore booklog/*.py booklog/*.csv booklog/TLdata.txt \
   booklog/googlebooks booklog/openbd booklog/data/enrich.json \

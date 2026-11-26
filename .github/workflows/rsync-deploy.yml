@@ -1,0 +1,84 @@
+# 共通のデプロイ処理（reusable workflow）
+# 呼び出し元リポジトリの中身を、さくらVPSへ rsync する。
+# 配置先ディレクトリはサーバー側の authorized_keys（rrsync）で鍵ごとに固定しているので、ここでは指定しない。
+#
+# 呼び出し元リポジトリに必要な Secrets:
+#   SSH_KEY      デプロイ用の秘密鍵（リポジトリごとに別の鍵）
+#   SSH_HOST     サーバーのホスト名
+#   SSH_PORT     SSH のポート（省略時 22）
+#   SSH_USER     deploy
+#   KNOWN_HOSTS  ssh-keyscan の出力
+# 公開しないファイルは、呼び出し元リポジトリの .deployignore に書く。
+name: rsync-deploy
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        description: true なら実際には転送・削除せず、変更内容だけを表示する
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  rsync:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Secrets の確認
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
+        run: |
+          missing=0
+          for v in SSH_KEY SSH_HOST SSH_USER KNOWN_HOSTS; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret $v が未設定です"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: SSH の準備
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: rsync
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # -c: 中身が変わったファイルだけ送る（checkout 直後は更新日時が当てにならないため）
+          # --delete: リポジトリから消したファイルはサーバーからも消す（除外したものは消さない）
+          opts=(-rlpcz --delete --chmod=D755,F644 --itemize-changes --stats
+                --exclude=/.git/ --exclude=/.github/ --exclude=/.deployignore)
+          if [ -f .deployignore ]; then
+            opts+=(--exclude-from=.deployignore)
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            opts+=(--dry-run)
+            echo "::notice::dry-run です。サーバーは変更されません。"
+          fi
+          rsync "${opts[@]}" \
+            -e "ssh -i $HOME/.ssh/deploy_key -p ${SSH_PORT:-22} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            ./ "$SSH_USER@$SSH_HOST:./"
+
+      - name: 鍵の削除
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

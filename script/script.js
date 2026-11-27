@@ -77,6 +77,7 @@
         const BASE = .045; // ふだんの濃さ
         const NEAR = .12; // 山頂で足す濃さ
         const RIPS = 8; // 同時に広がる波の数
+        const QN = 24; // 文字の下を静かにする四角の数の上限(data-quiet)
         const T0 = performance.now();
         // ほとんど止まっている絵なので、描いた内容を保つ(見えない間に描いた分が消えないように)
         const gl = cvs.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
@@ -109,12 +110,23 @@
             uniform vec2 u_res, u_mouse;
             uniform float u_aim, u_lift, u_half, u_r, u_time;
             uniform vec4 u_rip[${RIPS}];
+            uniform vec4 u_q[${QN}];
+            uniform float u_qn;
             varying vec2 v_uv;
             varying float v_a;
             void main() {
+                // 文字の下(静かにする四角の中)では、W と S を薄くし、丘も波も立てない。縁はなだらかに
+                float qz = 0.0;
+                for (int i = 0; i < ${QN}; i++) {
+                    if (float(i) >= u_qn) break;
+                    vec4 b = u_q[i];
+                    vec2 e = abs(a_pos - (b.xy + b.zw) * 0.5) - (b.zw - b.xy) * 0.5;
+                    float sd = length(max(e, 0.0)) + min(max(e.x, e.y), 0.0);
+                    qz = max(qz, 1.0 - smoothstep(0.0, 30.0, sd));
+                }
                 vec2 d = a_pos - u_mouse;
                 // なだらかな丘(0〜1)。カーソルの真下がいちばん高い
-                float h = exp(-dot(d, d) / (u_r * u_r)) * u_lift;
+                float h = exp(-dot(d, d) / (u_r * u_r)) * u_lift * (1.0 - qz);
                 // 波: 山がひとつだけの、ゆるい輪が外へ広がって消える
                 float w = 0.0;
                 vec2 push = vec2(0.0);
@@ -129,7 +141,7 @@
                     w += wi;
                     push += e / max(dist, 0.001) * wi;
                 }
-                w = min(w, 1.0);
+                w = min(w, 1.0) * (1.0 - qz);
                 vec2 p = a_pos + d * h * 0.08 + push * 3.0;
                 vec2 to = u_mouse - p;
                 vec2 dir = normalize(mix(vec2(0.0, -1.0), to / max(length(to), 0.001), u_aim) + vec2(0.0, -0.0001));
@@ -137,7 +149,7 @@
                 vec2 q = p + vec2(-dir.y * c.x - dir.x * c.y, dir.x * c.x - dir.y * c.y);
                 gl_Position = vec4(q.x / u_res.x * 2.0 - 1.0, 1.0 - q.y / u_res.y * 2.0, 0.0, 1.0);
                 v_uv = vec2((a_cor.z + a_cor.x * 0.5 + 0.5) * 0.5, a_cor.y * 0.5 + 0.5);
-                v_a = clamp(${BASE.toFixed(3)} + ${NEAR.toFixed(3)} * h + 0.07 * w, 0.0, 1.0);
+                v_a = clamp(${BASE.toFixed(3)} + ${NEAR.toFixed(3)} * h + 0.07 * w, 0.0, 1.0) * (1.0 - 0.88 * qz);
             }`;
         const FS = `
             precision mediump float;
@@ -149,8 +161,8 @@
                 gl_FragColor = vec4(vec3(0.0667) * a, a);
             }`;
 
-        let prog, buf, tex, U = {}, count = 0, W = 0, H = 0, raf = 0, last = 0, alive = 0, ri = 0;
-        const rip = new Float32Array(RIPS * 4);
+        let prog, buf, tex, U = {}, count = 0, W = 0, H = 0, raf = 0, last = 0, alive = 0, ri = 0, qn = 0;
+        const rip = new Float32Array(RIPS * 4), qbuf = new Float32Array(QN * 4);
         const st = { seen: false, mx: 0, my: 0, tx: 0, ty: 0, aim: 0, aimT: 0, lift: 0, liftT: 0, lx: 0, ly: 0, acc: 0, lastEmit: 0 };
 
         function init() {
@@ -166,7 +178,7 @@
             gl.linkProgram(prog);
             if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
             gl.useProgram(prog);
-            ['u_res', 'u_mouse', 'u_aim', 'u_lift', 'u_half', 'u_r', 'u_time', 'u_rip', 'u_tex'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+            ['u_res', 'u_mouse', 'u_aim', 'u_lift', 'u_half', 'u_r', 'u_time', 'u_rip', 'u_tex', 'u_q', 'u_qn'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
             buf = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             const aPos = gl.getAttribLocation(prog, 'a_pos'), aCor = gl.getAttribLocation(prog, 'a_cor');
@@ -245,6 +257,8 @@
             gl.uniform1f(U.u_lift, st.lift);
             gl.uniform1f(U.u_time, (performance.now() - T0) / 1000);
             gl.uniform4fv(U.u_rip, rip);
+            gl.uniform4fv(U.u_q, qbuf);
+            gl.uniform1f(U.u_qn, qn);
             gl.uniform1i(U.u_tex, 0);
             gl.drawArrays(gl.TRIANGLES, 0, count);
         }
@@ -306,7 +320,25 @@
             kick();
         };
 
-        if (!gl || !init()) return flat();
+        // 静かにする四角を測り直す。els は文字のまとまり(見出し・本文・メニューなど)。少し外まで広げる
+        let quietEls = () => [];
+        function quiet(fn) {
+            if (fn) quietEls = fn;
+            if (!gl) return;
+            qn = 0;
+            qbuf.fill(0);
+            for (const el of quietEls()) {
+                if (qn >= QN) break;
+                const r = el.getBoundingClientRect();
+                if (!r.width || !r.height || r.bottom < -60 || r.top > innerHeight + 60) continue;
+                const pad = 8;
+                qbuf.set([r.left - pad, r.top - pad, r.right + pad, r.bottom + pad], qn * 4);
+                qn++;
+            }
+            if (prog) kick();
+        }
+
+        if (!gl || !init()) return { ...flat(), quiet() {} };
         addEventListener('pointermove', point, { passive: true });
         addEventListener('pointerdown', point, { passive: true });
         // ウィンドウの外へ出たとき、指を離したとき(タッチにはカーソルが残らないため)は丘を下げる
@@ -330,7 +362,7 @@
                 draw();
             }, () => {});
         }
-        return { build };
+        return { build, quiet };
     })();
 
     /* ----------------------------------------------------------------------
@@ -984,6 +1016,7 @@
             b.setAttribute('aria-label', aria || label);
         };
         set('back', parent, parent && (parent.id === 'top' ? 'テレビにもどる' : `${parent.name}の一覧へ`));
+        $('[data-dock="back"]', dock).classList.toggle('is-tv', !!parent && parent.id === 'top');
         set('prev', sib[i - 1], sib[i - 1] && sib[i - 1].name, sib[i - 1] && `前のプロダクト: ${sib[i - 1].name}`);
         set('next', sib[i + 1], sib[i + 1] && sib[i + 1].name, sib[i + 1] && `次のプロダクト: ${sib[i + 1].name}`);
         dock.classList.toggle('is-empty', !parent);
@@ -1002,17 +1035,91 @@
         fitMark();
         header.classList.remove('is-scrolled');
         tv.toggle(s.id === 'top');
+        page.enter(s);
+        field.quiet();
     }
+
+    /* 各画面の飾り: 頭の小さな画面の 3D の絵、準備中のアカウントの砂嵐、端末に 1 行ずつ出す */
+    const page = (() => {
+        let stops = [], snowTimer = 0;
+        const snow = (el) => {
+            let t = '';
+            for (let r = 0; r < 10; r++) {
+                for (let c = 0; c < 11; c++) {
+                    const x = Math.random();
+                    t += x < .28 ? 'W' : x < .56 ? 'S' : ' ';
+                }
+                t += '\n';
+            }
+            el.textContent = t;
+        };
+        return {
+            enter(s) {
+                stops.forEach((f) => f());
+                stops = [];
+                clearInterval(snowTimer);
+                $$('canvas[data-emblem]', s.el).forEach((c) => stops.push(tv.mini3d.mount(c, c.dataset.emblem)));
+                const flakes = $$('.acct-snow', s.el);
+                flakes.forEach(snow);
+                if (flakes.length && !RM) snowTimer = setInterval(() => { if (!document.hidden) flakes.forEach(snow); }, 110);
+                $$('[data-term]', s.el).forEach((t) => {
+                    $$('.tl', t).forEach((l, i) => l.style.setProperty('--i', i));
+                    t.classList.remove('is-typing');
+                });
+            },
+            // 画面が見えたら(W と S が本物に替わったら)、端末に 1 行ずつ打ちこむ
+            type(s) {
+                if (RM) return;
+                $$('[data-term]', s.el).forEach((t) => {
+                    t.classList.remove('is-typing');
+                    void t.offsetWidth;
+                    t.classList.add('is-typing');
+                });
+            },
+        };
+    })();
+
+    // 背景の W と S を静かにする所: ヘッダーの文字、もどるボタン、いまの画面の data-quiet
+    field.quiet(() => [
+        $('.logo', header), $('.nav', header),
+        ...$$('.dock-btn:not([hidden])', dock),
+        ...(cur ? $$('[data-quiet]', cur.el) : []),
+    ]);
+    let quietRaf = 0;
+    const requiet = () => {
+        if (quietRaf) return;
+        quietRaf = requestAnimationFrame(() => {
+            quietRaf = 0;
+            field.quiet();
+        });
+    };
+    addEventListener('scroll', requiet, { passive: true });
+    if ('ResizeObserver' in window) {
+        const ro = new ResizeObserver(requiet);
+        screens.forEach((o) => ro.observe(o.el));
+        ro.observe(header);
+    }
+    if (document.fonts) document.fonts.ready.then(requiet);
 
     // origin: 円が広がり始める点(押したボタンなど)。dir: 横へ流すとき(前後のプロダクト)
     // before: 次の画面に替わる直前にすること
-    function go(id, { push = true, origin = null, dir = null, before = null } = {}) {
+    function go(id, { push = true, origin = null, dir = null, before = null, morph = null } = {}) {
         const next = byId(id);
         if (!next || busy || next === cur) return false;
         if (push) history.pushState(null, '', `#${id}`);
         if (RM) {
             if (before) before();
+            if (morph) morph.z.remove();
             show(next);
+            return true;
+        }
+        if (morph) {
+            morphIn(next, morph);
+            return true;
+        }
+        // テレビの中の画面からトップへ: テレビの画面の中から、外へ引いて出てくる
+        if (next.id === 'top' && cur && tv.channelOf(cur)) {
+            pullOut(next);
             return true;
         }
         busy = true;
@@ -1025,7 +1132,10 @@
                 dock.classList.add('is-forming');
                 show(next);
             },
-            onReveal: (parts, fast) => playIn(parts, containers, fast),
+            onReveal: (parts, fast) => {
+                playIn(parts, containers, fast);
+                page.type(next);
+            },
         }).then(() => {
             busy = false;
             // 移動中に戻る・進むが押されていたら、URL の画面に合わせる
@@ -1033,6 +1143,253 @@
             if (want && want !== cur) go(want.id, { push: false });
         });
         return true;
+    }
+
+    /* テレビの番組と、行き先の画面とをつなぐ部分。番組の板はここへ縮んでおさまり、もどるときはここから広がる。
+       プロダクトは最初の作品の画面、作品は大きな画面、ボットは投稿のアプリの画面、経歴は端末、SNS はアカウントのまとまり */
+    const BRIDGE = { works: '.products .monitor-screen', bots: '.monitor--app .monitor-screen', about: '.term-win', sns: '.sns' };
+    const bridgeOf = (s, src) => {
+        // プロダクトの一覧は、テレビに映っていた作品の画面へ
+        if (s.id === 'works' && src) {
+            const m = $$('.products .monitor-screen', s.el).find((el) => $('img', el).getAttribute('src') === src);
+            if (m) return m;
+        }
+        if (BRIDGE[s.id]) return $(BRIDGE[s.id], s.el);
+        return $$('.media', s.el).find((m) => m.getClientRects().length) || null;
+    };
+    // 板(テレビの画面の大きさ r)を、要素の四角 t に重ねる位置。幅を合わせ、はみ出す下は切る。角の丸みも合わせる
+    const placeOn = (t, r, el) => {
+        const sc = t.width / r.width, rad = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+        return { x: t.left, y: t.top, s: sc, b: Math.max(0, r.height - t.height / sc), rad: rad / sc };
+    };
+    // 板を a から b へ(e は 0〜1)。位置・倍率・下の切り取り・角の丸み
+    const plateAt = (z, a, b, e) => {
+        const m = (k) => a[k] + (b[k] - a[k]) * e;
+        z.style.transform = `translate(${m('x')}px, ${m('y')}px) scale(${m('s')})`;
+        z.style.clipPath = `inset(0px 0px ${m('b').toFixed(1)}px 0px round ${m('rad').toFixed(1)}px)`;
+    };
+    // requestAnimationFrame で dur ミリ秒かけて fn(p) を呼ぶ(p は 0〜1)。
+    // 時計は最初のコマから数える(画面を替えた直後の重いコマで、いきなり先へ飛ばないように)
+    const tween = (dur, fn) => new Promise((done) => {
+        let t0 = 0;
+        fn(0);
+        const step = (now) => {
+            if (!t0) t0 = now;
+            const p = Math.min(1, (now - t0) / dur);
+            fn(p);
+            if (p < 1) requestAnimationFrame(step);
+            else done();
+        };
+        requestAnimationFrame(step);
+    });
+    const easeIO = (t) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+    const ramp = (a, b, x) => clamp((x - a) / (b - a), 0, 1);
+    // 板と本物の入れ替わり: [時刻, 板の濃さ]。段で行き来しながら本物へ
+    const SWAP = [[0, 1], [.66, .15], [.7, .85], [.75, .1], [.8, .6], [.85, 0], [.88, .35], [.92, 0]];
+    // 板をがたつかせる(横にずれて明滅する。一度だけ)
+    const tear = (el) => {
+        if (RM) return;
+        el.classList.remove('is-tearing');
+        void el.offsetWidth;
+        el.classList.add('is-tearing');
+    };
+
+    /* 切り替わりのグリッチ: 画面(または指定の四角)に、W と S のノイズの帯と、細い反転の帯を数コマだけ走らせる。
+       ページを替えた瞬間など、描き直しで引っかかったり大きさが飛んだりする所にかぶせて、演出に見せる。
+       帯は細く小さく(画面全体が明滅しないように) */
+    const glitch = (() => {
+        const c = document.createElement('canvas');
+        c.className = 'glitch-layer';
+        c.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(c);
+        const g = c.getContext('2d');
+        let until = 0, raf = 0, last = 0, area = null;
+        const frame = (now) => {
+            if (now >= until) {
+                g.clearRect(0, 0, c.width, c.height);
+                raf = 0;
+                return;
+            }
+            raf = requestAnimationFrame(frame);
+            if (now - last < 45) return; // 1 秒に 20 コマほど。カクカクと切り替わる
+            last = now;
+            const W = innerWidth, H = innerHeight;
+            if (c.width !== Math.round(W * DPR) || c.height !== Math.round(H * DPR)) {
+                c.width = Math.round(W * DPR);
+                c.height = Math.round(H * DPR);
+            }
+            g.setTransform(DPR, 0, 0, DPR, 0, 0);
+            g.clearRect(0, 0, W, H);
+            const cell = cellSize(), a = area || { left: 0, top: 0, width: W, height: H };
+            g.font = `600 ${cell * .8}px ${FONT}`;
+            g.textAlign = 'center';
+            const bands = 3 + ((Math.random() * 4) | 0);
+            for (let i = 0; i < bands; i++) {
+                const rows = 1 + ((Math.random() * 3) | 0), h = rows * cell;
+                const y = Math.round((a.top + Math.random() * Math.max(0, a.height - h)) / cell) * cell;
+                const w = a.width * rand(.3, 1), x = a.left + Math.random() * (a.width - w);
+                if (Math.random() < .3) { // 細い反転の帯
+                    g.fillStyle = '#111';
+                    g.fillRect(x, y + cell * .3, w, cell * rand(.25, .6));
+                    continue;
+                }
+                const dark = Math.random() < .5; // 暗い帯に明るい文字か、明るい帯に暗い文字
+                g.fillStyle = dark ? 'rgba(17, 17, 17, .88)' : 'rgba(255, 255, 255, .9)';
+                g.fillRect(x, y, w, h);
+                g.fillStyle = dark ? 'rgba(236, 236, 236, .75)' : 'rgba(17, 17, 17, .6)';
+                for (let r = 0; r < rows; r++) {
+                    for (let cx = x + cell / 2; cx < x + w; cx += cell) {
+                        if (Math.random() < .45) g.fillText(Math.random() < .5 ? 'W' : 'S', cx, y + r * cell + cell * .79);
+                    }
+                }
+            }
+        };
+        return {
+            burst(ms = 240, rect = null) {
+                if (RM) return;
+                const now = performance.now();
+                area = rect;
+                until = Math.max(until, now + ms);
+                if (!raf) {
+                    last = 0;
+                    raf = requestAnimationFrame(frame);
+                }
+            },
+        };
+    })();
+    // つなぐ部分は、ちらつかせずに板と入れ替える(data-part をいったん外す。外した印は data-hold)
+    const keep = (el) => {
+        const parts = el.closest('[data-part]') ? [el.closest('[data-part]')] : $$('[data-part]', el);
+        parts.forEach((p) => {
+            p.dataset.hold = p.dataset.part;
+            p.removeAttribute('data-part');
+        });
+        return () => parts.forEach((p) => {
+            p.dataset.part = p.dataset.hold;
+            delete p.dataset.hold;
+        });
+    };
+
+    // テレビから入るとき: 全面に広がった番組の板が、行き先のつなぐ部分へ縮んでおさまり、まわりの部品がちらついて出る
+    function morphIn(next, { z, r, at, src }) {
+        busy = true;
+        const containers = [next.el, dock];
+        containers.forEach((c) => c.classList.add('is-forming'));
+        show(next);
+        const target = bridgeOf(next, src);
+        const release = target ? keep(target) : () => {};
+        const held = target ? (target.closest('[data-hold]') ? [target.closest('[data-hold]')] : $$('[data-hold]', target)) : [];
+        const parts = stagger(partsOf(containers), .035);
+        z.getAnimations().forEach((a) => a.cancel());
+        z.style.borderRadius = '0px';
+        plateAt(z, at, at, 0);
+        const to = target ? placeOn(target.getBoundingClientRect(), r, target) : at;
+        const DUR = 820, MOVE = .76; // 動くのは前の 76%。終わりの方で、板と本物がちらつきながら入れ替わる
+        held.forEach((el) => { el.style.opacity = '0'; });
+        // ページが替わった瞬間(引っかかりやすい所)は、グリッチでごまかす
+        glitch.burst(300);
+        tear(z);
+        setTimeout(() => playIn(parts, containers, false), 160);
+        setTimeout(() => page.type(next), DUR * MOVE - 120);
+        let swapped = false;
+        tween(DUR, (p) => {
+            plateAt(z, at, to, easeIO(Math.min(1, p / MOVE)));
+            // 入れ替わり: なめらかに薄めず、段で行き来させる(テレビの信号が乱れて切り替わる感じ)
+            const k = target ? SWAP.filter(([t]) => p >= t).pop()[1] : 1 - p;
+            z.style.opacity = k;
+            held.forEach((el) => { el.style.opacity = target ? 1 - k : p; });
+            if (target && !swapped && p >= SWAP[1][0]) {
+                swapped = true;
+                glitch.burst(260, target.getBoundingClientRect());
+                tear(z);
+            }
+        }).then(() => {
+            z.remove();
+            held.forEach((el) => { el.style.opacity = ''; });
+            release();
+            busy = false;
+            field.quiet();
+            const want = wanted();
+            if (want && want !== cur) go(want.id, { push: false });
+        });
+    }
+
+    /* テレビの中の画面からトップへもどる: 電脳の世界から「出ていけ」とはじき出される。どの画面からでも同じ。
+       1. 画面がガタガタ揺れて裂け、ノイズの帯が走り、ブラウン管を切ったときのように横一本の線へつぶれる
+       2. 画面いっぱいまで寄ったテレビに替わる。テレビは砂嵐がバリバリ鳴っていて、カメラが勢いよく引く
+       3. 引いている途中で砂嵐が止み、元の番組にパッともどる */
+    function pullOut(top) {
+        const from = cur, n = tv.channelOf(from), W = innerWidth, H = innerHeight;
+        busy = true;
+        const els = [from.el, dock];
+        els.forEach((el) => {
+            const r = el.getBoundingClientRect();
+            el.style.transformOrigin = `${W / 2 - r.left}px ${H / 2 - r.top}px`;
+        });
+        glitch.burst(420);
+        const EJECT = 380, SHAKE = .55;
+        let jx = 0, jy = 0, last = 0;
+        tween(EJECT, (p) => {
+            const now = performance.now();
+            if (now - last > 40) { // 揺れはカクカクと、コマごとに跳ぶ
+                last = now;
+                const a = 1 - p * .5;
+                jx = (Math.random() - .5) * 36 * a;
+                jy = (Math.random() - .5) * 10 * a;
+            }
+            const q = ramp(SHAKE, 1, p), e = q * q;
+            const sy = 1 - .992 * e, sx = 1 - .35 * ramp(.6, 1, q);
+            const tf = `translate(${(jx * (1 - e)).toFixed(1)}px, ${(jy * (1 - e)).toFixed(1)}px) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+            // 揺れのあいだは横に裂ける(上下に分かれて別々にずれる)
+            const cut = p < SHAKE ? `inset(${(Math.random() * 30).toFixed(0)}% 0 ${(Math.random() * 30).toFixed(0)}% 0)` : '';
+            els.forEach((el) => {
+                el.style.transform = tf;
+                el.style.clipPath = Math.random() < .35 ? cut : '';
+                el.style.filter = q > 0 ? `brightness(${(1 + 1.4 * q).toFixed(2)})` : '';
+                el.style.opacity = p < SHAKE ? (Math.random() < .2 ? .55 : 1) : 1 - ramp(.85, 1, q);
+            });
+        }).then(() => {
+            els.forEach((el) => {
+                el.style.transform = el.style.transformOrigin = el.style.clipPath = el.style.filter = el.style.opacity = '';
+            });
+            // 裏でトップに替え、テレビはそのチャンネルにして、画面いっぱいまで寄せておく
+            tv.present(n);
+            tv.jam(true);
+            show(top);
+            const screenEl = tv.screen, topEl = top.el;
+            const sr = screenEl.getBoundingClientRect(), tr = topEl.getBoundingClientRect();
+            const k = Math.max(W / sr.width, H / sr.height);
+            const px = sr.left + sr.width / 2, py = sr.top + sr.height / 2;
+            const dx = W / 2 - px, dy = H / 2 - py;
+            topEl.style.transformOrigin = `${px - tr.left}px ${py - tr.top}px`;
+            screenEl.classList.add('is-pulling');
+            const set = (e, p) => {
+                topEl.style.transform = `translate(${dx * (1 - e)}px, ${dy * (1 - e)}px) scale(${k + (1 - k) * e})`;
+                screenEl.style.setProperty('--glass', ramp(.15, .7, p).toFixed(3));
+            };
+            set(0, 0);
+            glitch.burst(360);
+            const DUR = 760, CLEAR = .5; // 勢いよく引き(ヒュッ)、半ばで砂嵐が止んで番組にもどる
+            const easeOut = (t) => 1 - (1 - t) ** 4;
+            let cleared = false;
+            tween(DUR, (p) => {
+                set(easeOut(p), p);
+                if (!cleared && p >= CLEAR) {
+                    cleared = true;
+                    tv.jam(false);
+                    glitch.burst(120, screenEl.getBoundingClientRect());
+                }
+            }).then(() => {
+                topEl.style.transform = topEl.style.transformOrigin = '';
+                screenEl.classList.remove('is-pulling');
+                screenEl.style.removeProperty('--glass');
+                tv.osd(n);
+                busy = false;
+                field.quiet();
+                const want = wanted();
+                if (want && want !== cur) go(want.id, { push: false });
+            });
+        });
     }
 
     document.addEventListener('click', (e) => {
@@ -1505,8 +1862,10 @@
 
             const SCENES = { works: printer, bots: bot, about: cap, sns: atMark };
 
-            // 描く。due があれば、その時刻までのマスは W と S のノイズのまま(明るさが負のマスも同じノイズ)
-            function draw(scene, t, due) {
+            // 描く。due があれば、その時刻までのマスは W と S のノイズのまま(明るさが負のマスも同じノイズ)。
+            // 描く先(tg)は、テレビの小さな画面か、各画面の頭の小さな画面
+            function draw(tg, scene, t, due) {
+                const { cvs, g } = tg;
                 const S = cvs.clientWidth;
                 if (!S) return;
                 const px = Math.round(S * DPR);
@@ -1542,27 +1901,44 @@
                 }
             }
 
-            let raf = 0;
+            // 動かし始めて、止める関数を返す
+            function run(tg, id) {
+                const scene = SCENES[id];
+                if (RM) {
+                    draw(tg, scene, scene.t0);
+                    return () => {};
+                }
+                const t0 = performance.now(), due = Array.from({ length: COLS * ROWS }, () => scene.t0 + 40 + Math.random() * 300);
+                let last = -99, raf = 0;
+                const step = (now) => {
+                    raf = requestAnimationFrame(step);
+                    if (document.hidden) return;
+                    const t = now - t0;
+                    if (t - last < 40) return; // 1 秒に 25 コマほど。文字が切り替わる感じを残す
+                    last = t;
+                    draw(tg, scene, t + scene.t0, t < 400 ? due : null);
+                };
+                raf = requestAnimationFrame(step);
+                return () => cancelAnimationFrame(raf);
+            }
+
+            const tvTarget = { cvs, g };
+            let stopTv = null;
             return {
                 has: (id) => id in SCENES,
                 start(id) {
-                    const scene = SCENES[id];
                     miniBox.classList.add('is-3d');
-                    if (RM) { draw(scene, scene.t0); return; }
-                    const t0 = performance.now(), due = Array.from({ length: COLS * ROWS }, () => scene.t0 + 40 + Math.random() * 300);
-                    let last = -99;
-                    const step = (now) => {
-                        raf = requestAnimationFrame(step);
-                        const t = now - t0;
-                        if (t - last < 40) return; // 1 秒に 25 コマほど。文字が切り替わる感じを残す
-                        last = t;
-                        draw(scene, t + scene.t0, t < 400 ? due : null);
-                    };
-                    raf = requestAnimationFrame(step);
+                    if (stopTv) stopTv();
+                    stopTv = run(tvTarget, id);
                 },
                 stop() {
-                    cancelAnimationFrame(raf);
+                    if (stopTv) stopTv();
+                    stopTv = null;
                     miniBox.classList.remove('is-3d');
+                },
+                // 各画面の頭の小さな画面に描く
+                mount(canvas, id) {
+                    return SCENES[id] ? run({ cvs: canvas, g: canvas.getContext('2d') }, id) : () => {};
                 },
             };
         })();
@@ -1694,6 +2070,7 @@
             ch = n;
             tunedAt = performance.now();
             const c = chan(n);
+            chans.forEach((o) => o.prog.classList.remove('is-still'));
             knob.style.transform = `rotate(${ANG(n)}deg)`;
             burstUntil = tunedAt + (RM ? 0 : 300);
             if (!RM) {
@@ -1768,27 +2145,38 @@
                 go(c.id);
                 return;
             }
-            // 番組を写しとった板を、画面の位置から全面まで拡大する(縦横比は保ったまま、はみ出す分は切れる)
+            // 番組を写しとった板を、画面の位置から全面まで拡大する(縦横比は保ったまま、はみ出す分は切れる)。
+            // 全面になったら、その板が行き先の画面の、番組と同じ役目の部分(経歴なら端末)へ縮んでおさまる
+            const { z, r, full, at } = plate(c);
+            busy = true;
+            glitch.burst(160, r); // 写しの板に替わる瞬間も、グリッチでごまかす
+            z.animate([
+                { transform: `translate(${r.left}px, ${r.top}px) scale(1)`, borderRadius: '24px' },
+                { transform: full, borderRadius: '0px' },
+            ], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' }).finished.then(() => {
+                busy = false;
+                const shown = $('img.is-on', c.prog);
+                if (!go(c.id, { morph: { z, r, at, src: shown && shown.getAttribute('src') } })) z.remove();
+            });
+        }
+
+        // 番組を写しとった板(テレビの画面と同じ大きさ。左上を原点に動かす)。full は画面全体を覆うときの位置
+        function plate(c) {
             const r = screenEl.getBoundingClientRect();
             const z = document.createElement('div');
             z.className = 'tv-zoom';
             z.style.cssText = `left:0;top:0;width:${r.width}px;height:${r.height}px;transform-origin:0 0;--tw:${tvEl.offsetWidth}px`;
             const p = c.prog.cloneNode(true);
             p.hidden = false;
+            p.classList.add('is-still'); // 写しでは、端末の行を打ち直さない(いま見えている所のまま)
+            $$('img', p).forEach((im) => { im.decoding = 'sync'; }); // 写した瞬間に絵が抜けないように
             const scan = document.createElement('span');
             scan.className = 'tv-scan';
             z.append(p, scan);
             document.body.appendChild(z);
             const k = Math.max(innerWidth / r.width, innerHeight / r.height);
-            const tx = (innerWidth - r.width * k) / 2, ty = (innerHeight - r.height * k) / 2;
-            busy = true;
-            z.animate([
-                { transform: `translate(${r.left}px, ${r.top}px) scale(1)`, borderRadius: '24px' },
-                { transform: `translate(${tx}px, ${ty}px) scale(${k})`, borderRadius: '0px' },
-            ], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' }).finished.then(() => {
-                busy = false;
-                if (!go(c.id, { before: () => z.remove() })) z.remove();
-            });
+            const fx = (innerWidth - r.width * k) / 2, fy = (innerHeight - r.height * k) / 2;
+            return { z, r, k, full: `translate(${fx}px, ${fy}px) scale(${k})`, at: { x: fx, y: fy, s: k, b: 0, rad: 0 } };
         }
 
         links.forEach((a) => {
@@ -1875,6 +2263,50 @@
 
         return {
             powerOn,
+            mini3d,
+            screen: screenEl,
+            // 砂嵐でうめる(on)/ 止めて、番組を少し揺らしてもどす(off)
+            jam(jammed) {
+                if (RM) return;
+                screenEl.classList.toggle('is-jammed', jammed);
+                burstUntil = jammed ? Infinity : performance.now() + 60;
+                if (!jammed) {
+                    screenEl.classList.remove('is-tuning');
+                    void screenEl.offsetWidth;
+                    screenEl.classList.add('is-tuning');
+                }
+                paint();
+            },
+            // その画面を映しているチャンネルの番号(プロダクトの各作品は、プロダクトのチャンネル)
+            channelOf(s) {
+                const c = chans.find((o) => o.id === s.id || o.id === s.parent);
+                return c ? c.n : 0;
+            },
+            // 画面の外から戻ってくるとき: 砂嵐も揺れもなく、そのチャンネルが映っている状態にする
+            present(n) {
+                const c = chan(n);
+                if (!c) return;
+                on = true;
+                hinted = true;
+                screenEl.classList.remove('is-off', 'is-powering', 'is-tuning');
+                ch = n;
+                tunedAt = performance.now();
+                clearTimeout(swapTimer);
+                chans.forEach((o) => { o.prog.hidden = o !== c; });
+                c.prog.classList.add('is-still'); // 板と入れ替わったとき、端末の行が消えて打ち直されないように
+                knob.style.transform = `rotate(${ANG(n)}deg)`;
+                nums.forEach((b, i) => b.setAttribute('aria-current', i + 1 === n ? 'true' : 'false'));
+                links.forEach((a) => (+a.dataset.ch === n ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current')));
+                screenEl.setAttribute('aria-label', `${c.name}の画面へ`);
+                osd.classList.remove('is-on');
+            },
+            // チャンネルの番号を、画面の右上にしばらく出す
+            osd(n) {
+                osd.innerHTML = `${n}`;
+                osd.classList.add('is-on');
+                clearTimeout(osdTimer);
+                osdTimer = setTimeout(() => osd.classList.remove('is-on'), 1800);
+            },
             toggle(show) {
                 visible = show;
                 if (!show) {
@@ -2306,26 +2738,39 @@
     }
 
     (async function botFeed() {
-        const box = $('[data-bot-feed]');
-        if (!box || !window.fetch) return;
+        const list = $('[data-feed-list]');
+        if (!list || !window.fetch) return;
         const handle = 'nagai-kotoba-bot.bsky.social';
+        const agoOf = (when) => {
+            const min = Math.round((Date.now() - when) / 60000);
+            return min < 60 ? `${Math.max(min, 1)} 分前` : min < 60 * 24 ? `${Math.round(min / 60)} 時間前`
+                : `${when.getFullYear()}年${when.getMonth() + 1}月${when.getDate()}日`;
+        };
         try {
-            const res = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${handle}&limit=1&filter=posts_no_replies`);
+            const res = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${handle}&limit=8&filter=posts_no_replies`);
             if (!res.ok) return;
             const data = await res.json();
-            const post = data.feed && data.feed[0] && data.feed[0].post;
-            const lines = post ? String(post.record.text || '').split('\n').filter(Boolean) : [];
-            if (!lines.length) return;
-            const when = new Date(post.record.createdAt || post.indexedAt);
-            const min = Math.round((Date.now() - when) / 60000);
-            const ago = min < 60 ? `${Math.max(min, 1)} 分前` : min < 60 * 24 ? `${Math.round(min / 60)} 時間前`
-                : `${when.getFullYear()}年${when.getMonth() + 1}月${when.getDate()}日`;
-            $('.post-head', box).textContent = 'Bluesky の最新の投稿';
-            $$('[data-bot-word]').forEach((el) => { el.textContent = lines[0]; });
-            $$('[data-bot-yomi]').forEach((el) => { el.textContent = lines.slice(1).join(' '); });
-            $('.post-meta', box).textContent = `長い言葉bot · ${ago}`;
-            $$('[data-bot-ago]').forEach((el) => { el.textContent = ago; });
-            box.href = `https://bsky.app/profile/${handle}/post/${post.uri.split('/').pop()}`;
+            const posts = (data.feed || []).map((f) => f.post).filter((p) => p && p.record && p.record.text).map((p) => {
+                const lines = String(p.record.text).split('\n').filter(Boolean);
+                return { word: lines[0], yomi: lines.slice(1).join(' '), ago: agoOf(new Date(p.record.createdAt || p.indexedAt)), url: `https://bsky.app/profile/${handle}/post/${p.uri.split('/').pop()}` };
+            }).filter((p) => p.word).slice(0, 4);
+            if (!posts.length) return;
+            // テレビの 2 チャンネル
+            $$('[data-bot-word]').forEach((el) => { el.textContent = posts[0].word; });
+            $$('[data-bot-yomi]').forEach((el) => { el.textContent = posts[0].yomi; });
+            $$('[data-bot-ago]').forEach((el) => { el.textContent = posts[0].ago; });
+            // ボットの画面: いまある投稿の例を写して、中身を差し替える
+            const tpl = $('li', list);
+            list.replaceChildren(...posts.map((p) => {
+                const li = tpl.cloneNode(true);
+                $('.fpost', li).href = p.url;
+                $('.fpost-who span', li).textContent = p.ago;
+                $('.fpost-word', li).textContent = p.word;
+                $('.fpost-yomi', li).textContent = p.yomi;
+                return li;
+            }));
+            const label = $('[data-feed-label]');
+            if (label) label.textContent = 'Bluesky の最新の投稿';
         } catch (err) {
             // 読めないときは投稿の例を出したままにする
         }
@@ -2354,6 +2799,7 @@
                 root.classList.remove('is-intro');
                 if (!isTop) {
                     playIn(parts, containers, fast);
+                    page.type(first);
                     return;
                 }
                 if (fast) {

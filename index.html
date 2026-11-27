@@ -30,6 +30,15 @@
 <body>
     <a class="skip" href="#main">本文へ移動</a>
 
+    <!-- ドットのアイコン(16×16 のマス目)。仮置き。<use href="#i-…"> で使う -->
+    <svg class="sprite" aria-hidden="true" width="0" height="0">
+        <symbol id="i-x" viewBox="0 0 16 16"><path d="M2.08 1.08h.84v.84h-.84zM3.08 1.08h.84v.84h-.84zM13.08 1.08h.84v.84h-.84zM2.08 2.08h.84v.84h-.84zM3.08 2.08h.84v.84h-.84zM4.08 2.08h.84v.84h-.84zM12.08 2.08h.84v.84h-.84zM13.08 2.08h.84v.84h-.84zM3.08 3.08h.84v.84h-.84zM4.08 3.08h.84v.84h-.84zM5.08 3.08h.84v.84h-.84zM11.08 3.08h.84v.84h-.84zM12.08 3.08h.84v.84h-.84zM3.08 4.08h.84v.84h-.84zM4.08 4.08h.84v.84h-.84zM5.08 4.08h.84v.84h-.84zM6.08 4.08h.84v.84h-.84zM10.08 4.08h.84v.84h-.84zM11.08 4.08h.84v.84h-.84zM4.08 5.08h.84v.84h-.84zM5.08 5.08h.84v.84h-.84zM6.08 5.08h.84v.84h-.84zM7.08 5.08h.84v.84h-.84zM9.08 5.08h.84v.84h-.84zM10.08 5.08h.84v.84h-.84zM5.08 6.08h.84v.84h-.84zM6.08 6.08h.84v.84h-.84zM7.08 6.08h.84v.84h-.84zM8.08 6.08h.84v.84h-.84zM9.08 6.08h.84v.84h-.84zM6.08 7.08h.84v.84h-.84zM7.08 7.08h.84v.84h-.84zM8.08 7.08h.84v.84h-.84zM7.08 8.08h.84v.84h-.84zM8.08 8.08h.84v.84h-.84zM9.08 8.08h.84v.84h-.84zM7.08 9.08h.84v.84h-.84zM8.08 9.08h.84v.84h-.84zM9.08 9.08h.84v.84h-.84zM10.08 9.08h.84v.84h-.84zM6.08 10.08h.84v.84h-.84zM7.08 10.08h.84v.84h-.84zM8.08 10.08h.84v.84h-.84zM9.08 10.08h.84v.84h-.84zM10.08 10.08h.84v.84h-.84zM11.08 10.08h.84v.84h-.84zM5.08 11.08h.84v.84h-.84zM6.08 11.08h.84v.84h-.84zM9.08 11.08h.84v.84h-.84zM10.08 11.08h.84v.84h-.84zM11.08 11.08h.84v.84h-.84zM12.08 11.08h.84v.84h-.84zM4.08 12.08h.84v.84h-.84zM5.08 12.08h.84v.84h-.84zM10.08 12.08h.84v.84h-.84zM11.08 12.08h.84v.84h-.84zM12.08 12.08h.84v.84h-.84zM3.08 13.08h.84v.84h-.84zM4.08 13.08h.84v.84h-.84zM11.08 13.08h.84v.84h-.84zM12.08 13.08h.84v.84h-.84zM13.08 13.08h.84v.84h-.84zM2.08 14.08h.84v.84h-.84zM11.08 14.08h.84v.84h-.84zM12.08 14.08h.84v.84h-.84zM13.08 14.08h.84v.84h-.84z"/></symbol>
+        <symbol id="i-bluesky" viewBox="0 0 16 16"><path d="M1.08 2.08h.84v.84h-.84zM2.08 2.08h.84v.84h-.84zM13.08 2.08h.84v.84h-.84zM14.08 2.08h.84v.84h-.84zM1.08 3.08h.84v.84h-.84zM2.08 3.08h.84v.84h-.84zM3.08 3.08h.84v.84h-.84zM4.08 3.08h.84v.84h-.84zM11.08 3.08h.84v.84h-.84zM12.08 3.08h.84v.84h-.84zM13.08 3.08h.84v.84h-.84zM14.08 3.08h.84v.84h-.84zM1.08 4.08h.84v.84h-.84zM2.08 4.08h.84v.84h-.84zM3.08 4.08h.84v.84h-.84zM4.08 4.08h.84v.84h-.84zM5.08 4.08h.84v.84h-.84zM10.08 4.08h.84v.84h-.84zM11.08 4.08h.84v.84h-.84zM12.08 4.08h.84v.84h-.84zM13.08 4.08h.84v.84h-.84zM14.08 4.08h.84v.84h-.84zM1.08 5.08h.84v.84h-.84zM2.08 5.08h.84v.84h-.84zM3.08 5.08h.84v.84h-.84zM4.08 5.08h.84v.84h-.84zM5.08 5.08h.84v.84h-.84zM6.08 5.08h.84v.84h-.84zM9.08 5.08h.84v.84h-.84zM10.08 5.08h.84v.84h-.84zM11.08 5.08h.84v.84h-.84zM12.08 5.08h.84v.84h-.84zM13.08 5.08h.84v.84h-.84zM14.08 5.08h.84v.84h-.84zM1.08 6.08h.84v.84h-.84zM2.08 6.08h.84v.84h-.84zM3.08 6.08h.84v.84h-.84zM4.08 6.08h.84v.84h-.84zM5.08 6.08h.84v.84h-.84zM6.08 6.08h.84v.84h-.84zM9.08 6.08h.84v.84h-.84zM10.08 6.08h.84v.84h-.84zM11.08 6.08h.84v.84h-.84zM12.08 6.08h.84v.84h-.84zM13.08 6.08h.84v.84h-.84zM14.08 6.08h.84v.84h-.84zM2.08 7.08h.84v.84h-.84zM3.08 7.08h.84v.84h-.84zM4.08 7.08h.84v.84h-.84zM5.08 7.08h.84v.84h-.84zM6.08 7.08h.84v.84h-.84zM7.08 7.08h.84v.84h-.84zM8.08 7.08h.84v.84h-.84zM9.08 7.08h.84v.84h-.84zM10.08 7.08h.84v.84h-.84zM11.08 7.08h.84v.84h-.84zM12.08 7.08h.84v.84h-.84zM13.08 7.08h.84v.84h-.84zM2.08 8.08h.84v.84h-.84zM3.08 8.08h.84v.84h-.84zM4.08 8.08h.84v.84h-.84zM5.08 8.08h.84v.84h-.84zM6.08 8.08h.84v.84h-.84zM7.08 8.08h.84v.84h-.84zM8.08 8.08h.84v.84h-.84zM9.08 8.08h.84v.84h-.84zM10.08 8.08h.84v.84h-.84zM11.08 8.08h.84v.84h-.84zM12.08 8.08h.84v.84h-.84zM13.08 8.08h.84v.84h-.84zM5.08 9.08h.84v.84h-.84zM6.08 9.08h.84v.84h-.84zM7.08 9.08h.84v.84h-.84zM8.08 9.08h.84v.84h-.84zM9.08 9.08h.84v.84h-.84zM10.08 9.08h.84v.84h-.84zM4.08 10.08h.84v.84h-.84zM5.08 10.08h.84v.84h-.84zM6.08 10.08h.84v.84h-.84zM7.08 10.08h.84v.84h-.84zM8.08 10.08h.84v.84h-.84zM9.08 10.08h.84v.84h-.84zM10.08 10.08h.84v.84h-.84zM11.08 10.08h.84v.84h-.84zM3.08 11.08h.84v.84h-.84zM4.08 11.08h.84v.84h-.84zM5.08 11.08h.84v.84h-.84zM6.08 11.08h.84v.84h-.84zM7.08 11.08h.84v.84h-.84zM8.08 11.08h.84v.84h-.84zM9.08 11.08h.84v.84h-.84zM10.08 11.08h.84v.84h-.84zM11.08 11.08h.84v.84h-.84zM12.08 11.08h.84v.84h-.84zM3.08 12.08h.84v.84h-.84zM4.08 12.08h.84v.84h-.84zM5.08 12.08h.84v.84h-.84zM6.08 12.08h.84v.84h-.84zM9.08 12.08h.84v.84h-.84zM10.08 12.08h.84v.84h-.84zM11.08 12.08h.84v.84h-.84zM12.08 12.08h.84v.84h-.84zM4.08 13.08h.84v.84h-.84zM5.08 13.08h.84v.84h-.84zM10.08 13.08h.84v.84h-.84zM11.08 13.08h.84v.84h-.84z"/></symbol>
+        <symbol id="i-github" viewBox="0 0 16 16"><path d="M5.08 0.08h.84v.84h-.84zM6.08 0.08h.84v.84h-.84zM7.08 0.08h.84v.84h-.84zM8.08 0.08h.84v.84h-.84zM9.08 0.08h.84v.84h-.84zM10.08 0.08h.84v.84h-.84zM3.08 1.08h.84v.84h-.84zM4.08 1.08h.84v.84h-.84zM11.08 1.08h.84v.84h-.84zM12.08 1.08h.84v.84h-.84zM2.08 2.08h.84v.84h-.84zM13.08 2.08h.84v.84h-.84zM1.08 3.08h.84v.84h-.84zM4.08 3.08h.84v.84h-.84zM11.08 3.08h.84v.84h-.84zM14.08 3.08h.84v.84h-.84zM1.08 4.08h.84v.84h-.84zM4.08 4.08h.84v.84h-.84zM5.08 4.08h.84v.84h-.84zM6.08 4.08h.84v.84h-.84zM9.08 4.08h.84v.84h-.84zM10.08 4.08h.84v.84h-.84zM11.08 4.08h.84v.84h-.84zM14.08 4.08h.84v.84h-.84zM0.08 5.08h.84v.84h-.84zM4.08 5.08h.84v.84h-.84zM5.08 5.08h.84v.84h-.84zM6.08 5.08h.84v.84h-.84zM7.08 5.08h.84v.84h-.84zM8.08 5.08h.84v.84h-.84zM9.08 5.08h.84v.84h-.84zM10.08 5.08h.84v.84h-.84zM11.08 5.08h.84v.84h-.84zM15.08 5.08h.84v.84h-.84zM0.08 6.08h.84v.84h-.84zM3.08 6.08h.84v.84h-.84zM4.08 6.08h.84v.84h-.84zM5.08 6.08h.84v.84h-.84zM6.08 6.08h.84v.84h-.84zM7.08 6.08h.84v.84h-.84zM8.08 6.08h.84v.84h-.84zM9.08 6.08h.84v.84h-.84zM10.08 6.08h.84v.84h-.84zM11.08 6.08h.84v.84h-.84zM12.08 6.08h.84v.84h-.84zM15.08 6.08h.84v.84h-.84zM0.08 7.08h.84v.84h-.84zM3.08 7.08h.84v.84h-.84zM4.08 7.08h.84v.84h-.84zM5.08 7.08h.84v.84h-.84zM6.08 7.08h.84v.84h-.84zM7.08 7.08h.84v.84h-.84zM8.08 7.08h.84v.84h-.84zM9.08 7.08h.84v.84h-.84zM10.08 7.08h.84v.84h-.84zM11.08 7.08h.84v.84h-.84zM12.08 7.08h.84v.84h-.84zM15.08 7.08h.84v.84h-.84zM0.08 8.08h.84v.84h-.84zM3.08 8.08h.84v.84h-.84zM4.08 8.08h.84v.84h-.84zM5.08 8.08h.84v.84h-.84zM6.08 8.08h.84v.84h-.84zM7.08 8.08h.84v.84h-.84zM8.08 8.08h.84v.84h-.84zM9.08 8.08h.84v.84h-.84zM10.08 8.08h.84v.84h-.84zM11.08 8.08h.84v.84h-.84zM12.08 8.08h.84v.84h-.84zM15.08 8.08h.84v.84h-.84zM0.08 9.08h.84v.84h-.84zM4.08 9.08h.84v.84h-.84zM5.08 9.08h.84v.84h-.84zM6.08 9.08h.84v.84h-.84zM7.08 9.08h.84v.84h-.84zM8.08 9.08h.84v.84h-.84zM9.08 9.08h.84v.84h-.84zM10.08 9.08h.84v.84h-.84zM11.08 9.08h.84v.84h-.84zM15.08 9.08h.84v.84h-.84zM1.08 10.08h.84v.84h-.84zM5.08 10.08h.84v.84h-.84zM6.08 10.08h.84v.84h-.84zM7.08 10.08h.84v.84h-.84zM8.08 10.08h.84v.84h-.84zM9.08 10.08h.84v.84h-.84zM10.08 10.08h.84v.84h-.84zM14.08 10.08h.84v.84h-.84zM1.08 11.08h.84v.84h-.84zM3.08 11.08h.84v.84h-.84zM7.08 11.08h.84v.84h-.84zM8.08 11.08h.84v.84h-.84zM14.08 11.08h.84v.84h-.84zM2.08 12.08h.84v.84h-.84zM4.08 12.08h.84v.84h-.84zM7.08 12.08h.84v.84h-.84zM8.08 12.08h.84v.84h-.84zM13.08 12.08h.84v.84h-.84zM3.08 13.08h.84v.84h-.84zM5.08 13.08h.84v.84h-.84zM6.08 13.08h.84v.84h-.84zM7.08 13.08h.84v.84h-.84zM8.08 13.08h.84v.84h-.84zM12.08 13.08h.84v.84h-.84zM4.08 14.08h.84v.84h-.84zM5.08 14.08h.84v.84h-.84zM8.08 14.08h.84v.84h-.84zM10.08 14.08h.84v.84h-.84zM11.08 14.08h.84v.84h-.84zM6.08 15.08h.84v.84h-.84zM7.08 15.08h.84v.84h-.84zM8.08 15.08h.84v.84h-.84zM9.08 15.08h.84v.84h-.84zM10.08 15.08h.84v.84h-.84z"/></symbol>
+        <symbol id="i-mail" viewBox="0 0 16 16"><path d="M1.08 3.08h.84v.84h-.84zM2.08 3.08h.84v.84h-.84zM3.08 3.08h.84v.84h-.84zM4.08 3.08h.84v.84h-.84zM5.08 3.08h.84v.84h-.84zM6.08 3.08h.84v.84h-.84zM7.08 3.08h.84v.84h-.84zM8.08 3.08h.84v.84h-.84zM9.08 3.08h.84v.84h-.84zM10.08 3.08h.84v.84h-.84zM11.08 3.08h.84v.84h-.84zM12.08 3.08h.84v.84h-.84zM13.08 3.08h.84v.84h-.84zM14.08 3.08h.84v.84h-.84zM1.08 4.08h.84v.84h-.84zM2.08 4.08h.84v.84h-.84zM3.08 4.08h.84v.84h-.84zM12.08 4.08h.84v.84h-.84zM13.08 4.08h.84v.84h-.84zM14.08 4.08h.84v.84h-.84zM1.08 5.08h.84v.84h-.84zM3.08 5.08h.84v.84h-.84zM4.08 5.08h.84v.84h-.84zM11.08 5.08h.84v.84h-.84zM12.08 5.08h.84v.84h-.84zM14.08 5.08h.84v.84h-.84zM1.08 6.08h.84v.84h-.84zM4.08 6.08h.84v.84h-.84zM5.08 6.08h.84v.84h-.84zM10.08 6.08h.84v.84h-.84zM11.08 6.08h.84v.84h-.84zM14.08 6.08h.84v.84h-.84zM1.08 7.08h.84v.84h-.84zM5.08 7.08h.84v.84h-.84zM6.08 7.08h.84v.84h-.84zM9.08 7.08h.84v.84h-.84zM10.08 7.08h.84v.84h-.84zM14.08 7.08h.84v.84h-.84zM1.08 8.08h.84v.84h-.84zM6.08 8.08h.84v.84h-.84zM7.08 8.08h.84v.84h-.84zM8.08 8.08h.84v.84h-.84zM9.08 8.08h.84v.84h-.84zM14.08 8.08h.84v.84h-.84zM1.08 9.08h.84v.84h-.84zM14.08 9.08h.84v.84h-.84zM1.08 10.08h.84v.84h-.84zM14.08 10.08h.84v.84h-.84zM1.08 11.08h.84v.84h-.84zM14.08 11.08h.84v.84h-.84zM1.08 12.08h.84v.84h-.84zM2.08 12.08h.84v.84h-.84zM3.08 12.08h.84v.84h-.84zM4.08 12.08h.84v.84h-.84zM5.08 12.08h.84v.84h-.84zM6.08 12.08h.84v.84h-.84zM7.08 12.08h.84v.84h-.84zM8.08 12.08h.84v.84h-.84zM9.08 12.08h.84v.84h-.84zM10.08 12.08h.84v.84h-.84zM11.08 12.08h.84v.84h-.84zM12.08 12.08h.84v.84h-.84zM13.08 12.08h.84v.84h-.84zM14.08 12.08h.84v.84h-.84z"/></symbol>
+        <symbol id="i-tv" viewBox="0 0 16 16"><path d="M1.08 2.08h.84v.84h-.84zM2.08 2.08h.84v.84h-.84zM3.08 2.08h.84v.84h-.84zM4.08 2.08h.84v.84h-.84zM5.08 2.08h.84v.84h-.84zM6.08 2.08h.84v.84h-.84zM7.08 2.08h.84v.84h-.84zM8.08 2.08h.84v.84h-.84zM9.08 2.08h.84v.84h-.84zM10.08 2.08h.84v.84h-.84zM11.08 2.08h.84v.84h-.84zM12.08 2.08h.84v.84h-.84zM13.08 2.08h.84v.84h-.84zM14.08 2.08h.84v.84h-.84zM1.08 3.08h.84v.84h-.84zM2.08 3.08h.84v.84h-.84zM10.08 3.08h.84v.84h-.84zM11.08 3.08h.84v.84h-.84zM12.08 3.08h.84v.84h-.84zM13.08 3.08h.84v.84h-.84zM14.08 3.08h.84v.84h-.84zM15.08 3.08h.84v.84h-.84zM0.08 4.08h.84v.84h-.84zM1.08 4.08h.84v.84h-.84zM11.08 4.08h.84v.84h-.84zM12.08 4.08h.84v.84h-.84zM14.08 4.08h.84v.84h-.84zM15.08 4.08h.84v.84h-.84zM0.08 5.08h.84v.84h-.84zM1.08 5.08h.84v.84h-.84zM11.08 5.08h.84v.84h-.84zM14.08 5.08h.84v.84h-.84zM15.08 5.08h.84v.84h-.84zM0.08 6.08h.84v.84h-.84zM1.08 6.08h.84v.84h-.84zM11.08 6.08h.84v.84h-.84zM12.08 6.08h.84v.84h-.84zM13.08 6.08h.84v.84h-.84zM14.08 6.08h.84v.84h-.84zM15.08 6.08h.84v.84h-.84zM0.08 7.08h.84v.84h-.84zM1.08 7.08h.84v.84h-.84zM11.08 7.08h.84v.84h-.84zM12.08 7.08h.84v.84h-.84zM13.08 7.08h.84v.84h-.84zM14.08 7.08h.84v.84h-.84zM15.08 7.08h.84v.84h-.84zM0.08 8.08h.84v.84h-.84zM1.08 8.08h.84v.84h-.84zM11.08 8.08h.84v.84h-.84zM12.08 8.08h.84v.84h-.84zM13.08 8.08h.84v.84h-.84zM14.08 8.08h.84v.84h-.84zM15.08 8.08h.84v.84h-.84zM0.08 9.08h.84v.84h-.84zM1.08 9.08h.84v.84h-.84zM11.08 9.08h.84v.84h-.84zM12.08 9.08h.84v.84h-.84zM13.08 9.08h.84v.84h-.84zM14.08 9.08h.84v.84h-.84zM15.08 9.08h.84v.84h-.84zM0.08 10.08h.84v.84h-.84zM1.08 10.08h.84v.84h-.84zM11.08 10.08h.84v.84h-.84zM12.08 10.08h.84v.84h-.84zM13.08 10.08h.84v.84h-.84zM14.08 10.08h.84v.84h-.84zM15.08 10.08h.84v.84h-.84zM1.08 11.08h.84v.84h-.84zM2.08 11.08h.84v.84h-.84zM3.08 11.08h.84v.84h-.84zM4.08 11.08h.84v.84h-.84zM5.08 11.08h.84v.84h-.84zM6.08 11.08h.84v.84h-.84zM7.08 11.08h.84v.84h-.84zM8.08 11.08h.84v.84h-.84zM9.08 11.08h.84v.84h-.84zM10.08 11.08h.84v.84h-.84zM11.08 11.08h.84v.84h-.84zM12.08 11.08h.84v.84h-.84zM13.08 11.08h.84v.84h-.84zM14.08 11.08h.84v.84h-.84zM2.08 12.08h.84v.84h-.84zM3.08 12.08h.84v.84h-.84zM4.08 12.08h.84v.84h-.84zM5.08 12.08h.84v.84h-.84zM6.08 12.08h.84v.84h-.84zM7.08 12.08h.84v.84h-.84zM8.08 12.08h.84v.84h-.84zM9.08 12.08h.84v.84h-.84zM10.08 12.08h.84v.84h-.84zM11.08 12.08h.84v.84h-.84zM12.08 12.08h.84v.84h-.84zM13.08 12.08h.84v.84h-.84zM3.08 13.08h.84v.84h-.84zM12.08 13.08h.84v.84h-.84zM3.08 14.08h.84v.84h-.84zM12.08 14.08h.84v.84h-.84z"/></symbol>
+    </svg>
+
     <!-- 背景の薄い W と S。カーソルのほうを向く -->
     <canvas class="field" aria-hidden="true"></canvas>
 
@@ -120,9 +129,8 @@
                                         </span>
                                         <span class="tv-links-grid">
                                             <span class="tv-link"><b>GitHub</b><span>@wscalm</span></span>
-                                            <span class="tv-link is-soon"><b>X</b><span>準備中</span></span>
-                                            <span class="tv-link is-soon"><b>Bluesky</b><span>準備中</span></span>
-                                            <span class="tv-link is-soon"><b>メール</b><span>準備中</span></span>
+                                            <span class="tv-link"><b>X</b><span>@wsws_tech</span></span>
+                                            <span class="tv-link tv-link--wide"><b>メール</b><span>wsws.works@gmail.com</span></span>
                                         </span>
                                         <span class="tv-cap"><b>SNS</b></span>
                                     </span>
@@ -162,27 +170,42 @@
 
         <section class="screen screen--works" id="works" data-name="プロダクト" data-parent="top" aria-labelledby="title-works">
             <div class="panel panel--products">
-                <h2 class="screen-title" id="title-works" data-part="text">プロダクト</h2>
+                <header class="page-head">
+                    <span class="page-emblem" data-part="box" aria-hidden="true"><canvas data-emblem="works"></canvas><span class="page-ch">1</span></span>
+                    <span class="page-head-text" data-quiet>
+                        <h2 class="screen-title" id="title-works" data-part="text">プロダクト</h2>
+                        <span class="page-lead" data-part="text">個人で作って、公開しているウェブサイトとツールです。</span>
+                    </span>
+                </header>
                 <ul class="products">
                     <li>
                         <a class="product" href="#work-nagai" data-go="work-nagai">
-                            <span class="product-img" data-part="box"><img src="images/works/nagai-v3-home.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
-                            <span class="product-name" data-part="text">長い言葉のデータベース</span>
-                            <span class="product-desc" data-part="text">日本語の長い単語を集めて公開しているデータベース</span>
+                            <span class="monitor" data-part="box"><span class="monitor-screen"><img src="images/works/nagai-v3-home.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span></span>
+                            <span class="product-body" data-quiet>
+                                <span class="product-name" data-part="text">長い言葉のデータベース</span>
+                                <span class="product-desc" data-part="text">日本語の長い単語を集めて公開しているデータベース。3 回つくり直しました</span>
+                                <span class="product-url" data-part="text">nagai-kotoba-database.jp</span>
+                            </span>
                         </a>
                     </li>
                     <li>
                         <a class="product" href="#work-bookshelf" data-go="work-bookshelf">
-                            <span class="product-img" data-part="box"><img src="images/works/bookshelf-hero.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
-                            <span class="product-name" data-part="text">WSWS'S BOOKSHELF.</span>
-                            <span class="product-desc" data-part="text">読んだ本の記録</span>
+                            <span class="monitor" data-part="box"><span class="monitor-screen"><img src="images/works/bookshelf-hero.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span></span>
+                            <span class="product-body" data-quiet>
+                                <span class="product-name product-name--latin" data-part="text">WSWS'S BOOKSHELF.</span>
+                                <span class="product-desc" data-part="text">2022 年 7 月から読んだ本の記録。書影の一覧とジャンルで見られます</span>
+                                <span class="product-url" data-part="text">wasowaso.com/booklog</span>
+                            </span>
                         </a>
                     </li>
                     <li>
                         <a class="product" href="#work-romberg" data-go="work-romberg">
-                            <span class="product-img" data-part="box"><img src="images/works/romberg-graph.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
-                            <span class="product-name" data-part="text">ロンバーグ積分計算ツール</span>
-                            <span class="product-desc" data-part="text">定積分を近似して、分割数ごとの誤差を比べるツール</span>
+                            <span class="monitor" data-part="box"><span class="monitor-screen"><img src="images/works/romberg-graph.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span></span>
+                            <span class="product-body" data-quiet>
+                                <span class="product-name" data-part="text">ロンバーグ積分計算ツール</span>
+                                <span class="product-desc" data-part="text">定積分を近似して、分割数ごとの誤差を比べるツール</span>
+                                <span class="product-url" data-part="text">wasowaso.com/romberg</span>
+                            </span>
                         </a>
                     </li>
                 </ul>
@@ -246,7 +269,7 @@
                 </div>
             </div>
 
-            <div class="work-body">
+            <div class="work-body" data-quiet>
                 <h2 class="work-title" id="title-nagai" data-part="text">長い言葉のデータベース</h2>
                 <p class="work-desc" data-part="text">日本語の長い単語を集めて公開しているデータベースです。読みの長さや文字の構成、ジャンルなどから言葉を探せます。これまでに 3 回つくり直しました。</p>
                 <ul class="gen-list" role="tablist" aria-label="バージョン" data-tabs data-part="text">
@@ -275,7 +298,7 @@
                     </div>
                 </div>
             </div>
-            <div class="work-body">
+            <div class="work-body" data-quiet>
                 <h2 class="work-title" id="title-bookshelf" data-part="text">WSWS'S BOOKSHELF.</h2>
                 <p class="work-desc" data-part="text">読んだ本の記録です。2022 年 7 月から読んだ 168 冊を、書影の一覧とジャンルで見られます。</p>
                 <a class="visit" href="https://www.wasowaso.com/booklog/" target="_blank" rel="noopener noreferrer" data-part="text">サイトを見る<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a>
@@ -298,7 +321,7 @@
                     </div>
                 </div>
             </div>
-            <div class="work-body">
+            <div class="work-body" data-quiet>
                 <h2 class="work-title" id="title-romberg" data-part="text">ロンバーグ積分計算ツール</h2>
                 <p class="work-desc" data-part="text">数式を入力すると、グラフを描いて、台形則とロンバーグ積分で定積分を近似します。分割数ごとの誤差も表で比べられます。</p>
                 <a class="visit" href="https://www.wasowaso.com/romberg" target="_blank" rel="noopener noreferrer" data-part="text">サイトを見る<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a>
@@ -306,59 +329,193 @@
         </section>
 
         <!--
-            経歴。伏せたい所は .redact にする(黒い帯になり、中身は W と S の飾り。本当の文字は書かない)。
-            行を足すときは .career に <div><dt>…</dt><dd>…</dd></div> を追加する。
+            経歴: 端末の画面。トップのテレビの 3 チャンネル(経歴)と同じ見た目で、画面に入ると 1 行ずつ出る。
+            ※ モック。伏せている所(.redact)は、決まったら本当の文字に置き換える:
+               年月、学部・研究科の名前、研究のテーマ、会社名(会社名は出さない想定)。
+               skills の中身も仮(フルスタック・自然言語処理から想定したもの)。
+            伏せ字の中身は W と S の飾り(本当の文字は書かない)。
         -->
         <section class="screen screen--about" id="about" data-parent="top" data-name="経歴" aria-labelledby="title-about">
-            <div class="panel">
-                <h2 class="screen-title" id="title-about" data-part="text">経歴</h2>
-                <p class="about-name" data-part="text">わそわそ</p>
-                <dl class="career">
-                    <div data-part="text">
-                        <dt>現在</dt>
-                        <dd>個人で、ウェブサイトやウェブアプリ、X と Bluesky の bot を開発しています。</dd>
+            <div class="panel panel--wide">
+                <header class="page-head">
+                    <span class="page-emblem" data-part="box" aria-hidden="true"><canvas data-emblem="about"></canvas><span class="page-ch">3</span></span>
+                    <span class="page-head-text" data-quiet>
+                        <h2 class="screen-title" id="title-about" data-part="text">経歴</h2>
+                        <span class="page-lead" data-part="text">大阪の高校から岡山大学へ。大学院で自然言語処理を研究し、いまは東京でエンジニアをしています。</span>
+                    </span>
+                </header>
+
+                <div class="term-win" data-part="box">
+                    <p class="term-bar" aria-hidden="true"><span>wsws@works: ~</span><i></i><i></i><i></i></p>
+                    <div class="term" data-term>
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> whoami</p>
+                        <p class="tl tl-out"><b class="term-name">わそわそ</b> — 東京の IT 企業で働くフルスタックエンジニア</p>
+
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> git log --graph --format=career</p>
+                        <ol class="glog">
+                            <li class="tl">
+                                <p class="glog-meta"><span class="glog-hash">3f9a2c1</span> <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span> <span class="glog-date"><span class="redact" style="--w:2.2em"><span class="sr-only">年は非公開</span><span aria-hidden="true">WSWS</span></span>.04</span></p>
+                                <p class="glog-title">東京の IT 企業に入社</p>
+                                <p class="glog-body">フルスタックエンジニアとして、画面の見た目からサーバー、データベースまで、ひととおり担当しています。</p>
+                            </li>
+                            <li class="tl">
+                                <p class="glog-meta"><span class="glog-hash">8b1e7d4</span> <span class="glog-date"><span class="redact" style="--w:2.2em"><span class="sr-only">年は非公開</span><span aria-hidden="true">WSWS</span></span>.03</span></p>
+                                <p class="glog-title">岡山大学大学院 <span class="redact" style="--w:4.5em"><span class="sr-only">研究科名は非公開</span><span aria-hidden="true">WSWSWS</span></span>研究科 修了</p>
+                                <p class="glog-body">自然言語処理(人の言葉をコンピューターで扱う分野)を研究していました。</p>
+                            </li>
+                            <li class="tl">
+                                <p class="glog-meta"><span class="glog-hash">c27a5f0</span> <span class="glog-date"><span class="redact" style="--w:2.2em"><span class="sr-only">年は非公開</span><span aria-hidden="true">WSWS</span></span>.04</span></p>
+                                <p class="glog-title">岡山大学大学院に進学</p>
+                            </li>
+                            <li class="tl">
+                                <p class="glog-meta"><span class="glog-hash">5d40e9b</span> <span class="glog-date"><span class="redact" style="--w:2.2em"><span class="sr-only">年は非公開</span><span aria-hidden="true">WSWS</span></span>.04</span></p>
+                                <p class="glog-title">岡山大学 <span class="redact" style="--w:3.5em"><span class="sr-only">学部名は非公開</span><span aria-hidden="true">WSWSW</span></span>学部に入学</p>
+                                <p class="glog-body">大阪をはなれて、岡山へ。</p>
+                            </li>
+                            <li class="tl">
+                                <p class="glog-meta"><span class="glog-hash">0a6c3e8</span> <span class="glog-date"><span class="redact" style="--w:2.2em"><span class="sr-only">年は非公開</span><span aria-hidden="true">WSWS</span></span>.03</span></p>
+                                <p class="glog-title">大阪の高校を卒業</p>
+                            </li>
+                        </ol>
+
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> cat research.txt</p>
+                        <p class="tl tl-out">大学院では、自然言語処理を研究していました。</p>
+                        <p class="tl tl-out">テーマ: <span class="redact" style="--w:9em"><span class="sr-only">非公開</span><span aria-hidden="true">WSWSWSWSWSWS</span></span></p>
+
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> tree skills</p>
+                        <ul class="tree">
+                            <li class="tl"><span class="tree-dir">skills</span></li>
+                            <li class="tl"><span class="tree-pipe" aria-hidden="true">├── </span><span class="tree-dir">frontend/</span><span class="tree-note">HTML · CSS · JavaScript · TypeScript</span></li>
+                            <li class="tl"><span class="tree-pipe" aria-hidden="true">├── </span><span class="tree-dir">backend/</span><span class="tree-note">Node.js · Python · SQL</span></li>
+                            <li class="tl"><span class="tree-pipe" aria-hidden="true">├── </span><span class="tree-dir">nlp/</span><span class="tree-note">形態素解析 · 単語の分散表現 · 言語モデル</span></li>
+                            <li class="tl"><span class="tree-pipe" aria-hidden="true">└── </span><span class="tree-dir">infra/</span><span class="tree-note">Linux · VPS · GitHub Actions</span></li>
+                        </ul>
+
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> cat now.txt</p>
+                        <p class="tl tl-out">仕事のかたわら、個人でウェブサイトや bot を作っています。読んだ本は WSWS'S BOOKSHELF. に記録しています。</p>
+
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> ls works/</p>
+                        <p class="tl tl-out term-ls">
+                            <a href="#work-nagai" data-go="work-nagai">nagai-kotoba-database/</a>
+                            <a href="#work-bookshelf" data-go="work-bookshelf">wsws-bookshelf/</a>
+                            <a href="#work-romberg" data-go="work-romberg">romberg/</a>
+                            <a href="#bots" data-go="bots">nagai-kotoba-bot/</a>
+                        </p>
+                        <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~</span>$</span> <span class="term-cursor" aria-hidden="true"></span></p>
                     </div>
-                    <div data-part="text">
-                        <dt><span class="redact" style="--w:3.2em"><span class="sr-only">非公開</span><span aria-hidden="true">WSWS</span></span></dt>
-                        <dd><span class="redact" style="--w:5em"><span class="sr-only">非公開</span><span aria-hidden="true">WSWSWS</span></span>大学で、自然言語処理を専攻していました。</dd>
-                    </div>
-                </dl>
+                </div>
             </div>
         </section>
 
-        <!-- SNS と連絡先。決まったら .is-pending を <a> に置き換える -->
+        <!-- SNS と連絡先。準備中のものは <span class="acct is-soon"> にすると、画面が砂嵐になる -->
         <section class="screen screen--sns" id="sns" data-parent="top" data-name="SNS" aria-labelledby="title-sns">
-            <div class="panel">
-                <h2 class="screen-title" id="title-sns" data-part="text">SNS</h2>
-                <ul class="link-list">
-                    <li data-part="text"><span class="link-name">X</span><span class="link-id is-pending">準備中</span></li>
-                    <li data-part="text"><span class="link-name">Bluesky</span><span class="link-id is-pending">準備中</span></li>
-                    <li data-part="text"><a href="https://github.com/wscalm" target="_blank" rel="noopener noreferrer"><span class="link-name">GitHub</span><span class="link-id">@wscalm</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a></li>
-                    <li data-part="text"><span class="link-name">メール</span><span class="link-id is-pending">準備中</span></li>
-                </ul>
-                <p class="copyright" data-part="text"><small>© 2026 WSWS.WORKS</small></p>
+            <div class="panel panel--wide">
+                <header class="page-head">
+                    <span class="page-emblem" data-part="box" aria-hidden="true"><canvas data-emblem="sns"></canvas><span class="page-ch">4</span></span>
+                    <span class="page-head-text" data-quiet>
+                        <h2 class="screen-title" id="title-sns" data-part="text">SNS</h2>
+                        <span class="page-lead" data-part="text">更新のお知らせや、ご連絡はこちらから。</span>
+                    </span>
+                </header>
+
+                <div class="sns">
+                    <div class="me" data-quiet>
+                        <img class="me-icon" src="apple-touch-icon.png" alt="" width="180" height="180" data-part="box">
+                        <p class="me-name" data-part="text">わそわそ</p>
+                        <p class="me-id" data-part="text">WSWS.WORKS</p>
+                        <p class="me-bio" data-part="text">東京でフルスタックエンジニアをしています。個人で、ウェブサイトや bot を作っています。</p>
+                    </div>
+                    <ul class="accts">
+                        <li>
+                            <a class="acct" href="https://github.com/wscalm" target="_blank" rel="noopener noreferrer" data-part="box">
+                                <span class="acct-screen"><svg class="dots" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-github"/></svg></span>
+                                <span class="acct-text"><span class="acct-name">GitHub</span><span class="acct-id">@wscalm</span></span>
+                                <svg class="acct-go" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="acct" href="https://x.com/wsws_tech" target="_blank" rel="noopener noreferrer" data-part="box">
+                                <span class="acct-screen"><svg class="dots" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-x"/></svg></span>
+                                <span class="acct-text"><span class="acct-name">X</span><span class="acct-id">@wsws_tech</span></span>
+                                <svg class="acct-go" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                            </a>
+                        </li>
+                        <li class="accts-wide">
+                            <a class="acct" href="mailto:wsws.works@gmail.com" data-part="box">
+                                <span class="acct-screen"><svg class="dots" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-mail"/></svg></span>
+                                <span class="acct-text"><span class="acct-name">メール</span><span class="acct-id">wsws.works@gmail.com</span></span>
+                                <svg class="acct-go" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <p class="copyright" data-part="text" data-quiet><small>© 2026 WSWS.WORKS</small></p>
             </div>
         </section>
 
         <section class="screen screen--bots" id="bots" data-parent="top" data-name="ボット" aria-labelledby="title-bots">
             <div class="panel panel--wide">
-                <h2 class="screen-title" id="title-bots" data-part="text">ボット</h2>
+                <header class="page-head">
+                    <span class="page-emblem" data-part="box" aria-hidden="true"><canvas data-emblem="bots"></canvas><span class="page-ch">2</span></span>
+                    <span class="page-head-text" data-quiet>
+                        <h2 class="screen-title" id="title-bots" data-part="text">ボット</h2>
+                        <span class="page-lead" data-part="text">決まった時間に、ひとりでに投稿を続けるプログラムです。</span>
+                    </span>
+                </header>
+
                 <div class="bot">
-                    <div class="bot-body">
-                        <h3 class="bot-name" data-part="text">長い言葉bot</h3>
-                        <p class="bot-desc" data-part="text">「長い言葉のデータベース」に収録している、読みが 10 文字以上の単語を、1 時間に 1 回投稿しています。</p>
-                        <ul class="link-list">
-                            <li data-part="text"><a href="https://x.com/nagaikotoba_bot" target="_blank" rel="noopener noreferrer"><span class="link-name">X</span><span class="link-id">@nagaikotoba_bot</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a></li>
-                            <li data-part="text"><a href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer"><span class="link-name">Bluesky</span><span class="link-id">@nagai-kotoba-bot.bsky.social</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></a></li>
+                    <div class="bot-profile">
+                        <div class="bot-id" data-quiet>
+                            <img class="bot-icon" src="images/bots/nagai-kotoba-bot.png" alt="" width="160" height="160" data-part="box">
+                            <div>
+                                <h3 class="bot-name" data-part="text">長い言葉bot</h3>
+                                <p class="bot-handle" data-part="text">@nagai-kotoba-bot</p>
+                            </div>
+                        </div>
+                        <p class="bot-desc" data-part="text" data-quiet>「長い言葉のデータベース」に収録している、読みが 10 文字以上の言葉を、1 時間に 1 回投稿しています。</p>
+                        <ul class="accts accts--bot">
+                            <li>
+                                <a class="acct" href="https://x.com/nagaikotoba_bot" target="_blank" rel="noopener noreferrer" data-part="box">
+                                    <span class="acct-screen"><svg class="dots" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-x"/></svg></span>
+                                    <span class="acct-text"><span class="acct-name">X</span><span class="acct-id">@nagaikotoba_bot</span></span>
+                                    <svg class="acct-go" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="acct" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" data-part="box">
+                                    <span class="acct-screen"><svg class="dots" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-bluesky"/></svg></span>
+                                    <span class="acct-text"><span class="acct-name">Bluesky</span><span class="acct-id">@nagai-kotoba-bot.bsky.social</span></span>
+                                    <svg class="acct-go" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+                                </a>
+                            </li>
                         </ul>
+                        <!-- しくみの説明(見た目は端末。コマンド名は飾り) -->
+                        <div class="term-win term-win--mini" data-part="box">
+                            <p class="term-bar" aria-hidden="true"><span>wsws@works: ~/bots</span><i></i><i></i><i></i></p>
+                            <div class="term" data-term>
+                                <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~/bots</span>$</span> crontab -l</p>
+                                <p class="tl tl-out term-comment"># 毎時 0 分に、読みが 10 文字以上の言葉をひとつ選んで、X と Bluesky に投稿する</p>
+                                <p class="tl tl-out">0 * * * *&nbsp; nagai-kotoba-bot post</p>
+                                <p class="tl"><span class="ps"><span class="ps-user">wsws@works</span>:<span class="ps-dir">~/bots</span>$</span> <span class="term-cursor" aria-hidden="true"></span></p>
+                            </div>
+                        </div>
                     </div>
+
                     <!-- Bluesky の公開 API から最新の投稿を読んで差し替える。読めなければ投稿の例のまま -->
-                    <a class="post" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" data-part="box" data-bot-feed>
-                        <span class="post-head">投稿の例</span>
-                        <span class="post-word" data-bot-word>寿限無寿限無五劫の擦り切れ</span>
-                        <span class="post-yomi" data-bot-yomi>ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
-                        <span class="post-meta">長い言葉bot</span>
-                    </a>
+                    <div class="feed">
+                        <p class="feed-head" data-part="text" data-quiet><span data-feed-label>投稿の例</span></p>
+                        <div class="monitor monitor--app" data-part="box">
+                            <div class="monitor-screen app">
+                                <p class="app-bar" aria-hidden="true"><i></i>ホーム<i></i></p>
+                                <ol class="feed-list" data-feed-list>
+                            <li><a class="fpost" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" ><img class="fpost-icon" src="images/bots/nagai-kotoba-bot.png" alt="" width="160" height="160"><span class="fpost-main"><span class="fpost-who"><b>長い言葉bot</b><span>1 時間ごと</span></span><span class="fpost-word">寿限無寿限無五劫の擦り切れ</span><span class="fpost-yomi">ジュゲムジュゲムゴコウノスリキレ（16文字）</span></span></a></li>
+                            <li><a class="fpost" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" ><img class="fpost-icon" src="images/bots/nagai-kotoba-bot.png" alt="" width="160" height="160"><span class="fpost-main"><span class="fpost-who"><b>長い言葉bot</b><span>1 時間ごと</span></span><span class="fpost-word">宇宙背景放射</span><span class="fpost-yomi">ウチュウハイケイホウシャ（12文字）</span></span></a></li>
+                            <li><a class="fpost" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" ><img class="fpost-icon" src="images/bots/nagai-kotoba-bot.png" alt="" width="160" height="160"><span class="fpost-main"><span class="fpost-who"><b>長い言葉bot</b><span>1 時間ごと</span></span><span class="fpost-word">自己回帰言語モデル</span><span class="fpost-yomi">ジコカイキゲンゴモデル（11文字）</span></span></a></li>
+                            <li><a class="fpost" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" ><img class="fpost-icon" src="images/bots/nagai-kotoba-bot.png" alt="" width="160" height="160"><span class="fpost-main"><span class="fpost-who"><b>長い言葉bot</b><span>1 時間ごと</span></span><span class="fpost-word">東京神学大学</span><span class="fpost-yomi">トウキョウシンガクダイガク（13文字）</span></span></a></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -366,7 +523,7 @@
 
     <!-- もどる先と、となりのプロダクトへの案内。JavaScript がいまの画面に合わせて組み立てる -->
     <nav class="dock" aria-label="画面の移動" data-chrome>
-        <button class="dock-btn" type="button" data-dock="back" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
+        <button class="dock-btn" type="button" data-dock="back" data-part="text" hidden><svg class="dock-tv" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-tv"/></svg><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
         <button class="dock-btn" type="button" data-dock="prev" data-dir="-1" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
         <button class="dock-btn" type="button" data-dock="next" data-dir="1" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
     </nav>

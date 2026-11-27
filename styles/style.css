@@ -1162,6 +1162,14 @@ button {
     pointer-events: none;
 }
 
+/* スマホで、幅に合わせた板の上下を埋める幕(番組と同じ色) */
+.tv-zoom-bd {
+    position: fixed;
+    inset: 0;
+    z-index: 989;
+    pointer-events: none;
+}
+
 /* 板がガタついて明滅する(切り替わりの瞬間に一度だけ)。translate は transform とは別に重なる */
 .tv-zoom.is-tearing {
     animation: tear .28s steps(1, end);
@@ -1339,7 +1347,7 @@ button {
 }
 
 .work-media .gallery {
-    width: min(100%, calc((100svh - var(--header-h) - 250px) * 1.6));
+    width: min(100%, calc((100svh - var(--header-h) - 300px) * 1.6));
 }
 
 .work-title {
@@ -1355,40 +1363,110 @@ button {
     line-height: 2;
 }
 
+/* 版の切り替え: 画面の上に v1 v2 v3。ランプが点いているのが公開中 */
 .gen-list {
-    margin-top: 28px;
-    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    list-style: none;
 }
 
 .gen-list button {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 2.4em minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 12px;
-    padding: 13px 0;
-    border-bottom: 1px solid var(--line);
-    text-align: left;
-    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px 7px 14px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--line);
+    font: 600 13px / 1 var(--f-mark);
+    letter-spacing: .04em;
     color: var(--faint);
-    transition: color .25s;
+    transition: color .2s, background-color .2s, box-shadow .2s;
 }
 
 .gen-list button:hover {
-    color: var(--sub);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px #cfcfcf;
 }
 
 .gen-list button[aria-selected="true"] {
-    color: var(--ink);
+    background: var(--ink);
+    box-shadow: none;
+    color: #fff;
 }
 
-.gen-v {
-    font-weight: 600;
+.gen-lamp {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d4d4d2;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, .18);
 }
 
-.gen-note {
-    font-size: 12px;
-    color: var(--faint);
+[aria-selected="true"] .gen-lamp {
+    background: #555;
+    box-shadow: none;
+}
+
+.gen-lamp.is-live {
+    background: #35c46a;
+    box-shadow: 0 0 0 2px rgba(53, 196, 106, .18), 0 0 6px rgba(53, 196, 106, .7);
+}
+
+/* 版を替えるときの砂嵐(W と S)。走査の明るい帯が、新しい版へは下へ、古い版へは上へ流れる */
+.gen-snow {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    overflow: hidden;
+    border-radius: 8px / 10px;
+    background: #0d0d0d;
+    font: 600 8px / 8px ui-monospace, Menlo, Consolas, monospace;
+    letter-spacing: -.02em;
+    white-space: pre;
+    color: rgba(236, 236, 236, .42);
+    transition: opacity .18s;
+}
+
+.gen-snow::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 22%;
+    background: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, .16) 45%, rgba(255, 255, 255, .3) 50%, rgba(255, 255, 255, .16) 55%, rgba(255, 255, 255, 0));
+    animation: gen-track .48s linear both;
+}
+
+.gen-snow.is-back::after {
+    animation-direction: reverse;
+}
+
+.gen-snow.is-out {
+    opacity: 0;
+}
+
+@keyframes gen-track {
+    from { top: -22%; }
+    to { top: 100%; }
+}
+
+/* 左上の表示(テレビのチャンネル表示と同じ書き方) */
+.gen-osd {
+    position: absolute;
+    top: 7%;
+    left: 5%;
+    z-index: 4;
+    font: 600 clamp(16px, 2vw, 26px) / 1 var(--f-mark);
+    letter-spacing: .04em;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, .55), 0 0 2px rgba(0, 0, 0, .6);
+    pointer-events: none;
+    transition: opacity .4s;
+}
+
+.gen-osd.is-out {
+    opacity: 0;
 }
 
 /* 使っているもの(技術)。見出しは日本語の小さな一行、表は罫線だけ */
@@ -1991,6 +2069,89 @@ button {
     animation: term-line .01s calc(var(--i, 0) * .07s + .35s) both;
 }
 
+/* 経歴の端末は、最後の行に打ちこめる。見えない入力欄を行に重ね、打った文字とカーソルは端末の書き方で見せる */
+.term-prompt {
+    position: relative;
+    cursor: text;
+}
+
+.term-typed {
+    white-space: pre-wrap;
+}
+
+.term-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 16px; /* iPhone で入力時に拡大されないように */
+    color: transparent;
+    caret-color: transparent;
+    opacity: 0;
+    cursor: text;
+}
+
+.term-ph {
+    margin-left: .4em;
+    color: #6f6f6f;
+}
+
+.term.is-focus .term-ph,
+.term-prompt.has-text .term-ph {
+    display: none;
+}
+
+/* 打っていないときのカーソルは点滅させず、薄い枠だけ */
+.term:not(.is-focus) .term-prompt .term-cursor {
+    background: none;
+    box-shadow: inset 0 0 0 1px #8f8f8f;
+    animation: none;
+}
+
+.term.is-typing .tl.is-live {
+    animation: none;
+}
+
+.term.is-cleared > :not(.term-prompt):not(.is-live) {
+    display: none;
+}
+
+.tl-pre {
+    white-space: pre-wrap;
+    overflow-wrap: normal;
+}
+
+.tl-dir,
+.tl-key {
+    font-weight: 700;
+    color: #729fcf;
+}
+
+.tl-user,
+.tl-art {
+    font-weight: 700;
+    color: #8ae234;
+}
+
+.tl-git {
+    color: #c4a000;
+}
+
+/* sl の汽車。行の高さを詰めて、1 文字ずつ左へ動かす */
+.term-sl-track {
+    overflow: hidden;
+}
+
+.term-sl {
+    display: block;
+    width: max-content;
+    white-space: pre;
+    line-height: 1.25;
+    color: #e8e8e8;
+}
+
 /* 伏せ字は、端末の中では明るい帯にする */
 .term .redact {
     background: #d9d9d9;
@@ -2336,12 +2497,66 @@ button {
     gap: 10px;
 }
 
-.term-win--mini {
-    margin-top: 22px;
+/* しくみ: 次の投稿までの時間と、今日の 24 回。済んだ回は塗り、次の回は点滅 */
+.bot-clock {
+    margin-top: 26px;
 }
 
-.term-win--mini .term {
-    font-size: 13px;
+.bot-clock-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--faint);
+}
+
+.bot-clock-left {
+    font: 600 22px / 1.2 var(--f-mark);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .02em;
+    color: var(--ink);
+}
+
+.bot-hours {
+    display: grid;
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+    gap: 3px;
+    margin-top: 10px;
+    list-style: none;
+}
+
+.bot-hours li {
+    aspect-ratio: 1;
+    max-height: 14px;
+    border-radius: 2px;
+    background: #ececea;
+}
+
+.bot-hours li.is-done {
+    background: var(--ink);
+}
+
+.bot-hours li.is-next {
+    background: none;
+    box-shadow: inset 0 0 0 1.5px var(--ink);
+    animation: term-blink 1s steps(1) infinite;
+}
+
+.bot-hours-scale {
+    display: grid;
+    grid-template-columns: repeat(4, 6fr) 0fr;
+    margin-top: 6px;
+    font: 500 11px / 1 var(--f-mark);
+    color: var(--faint);
+    white-space: nowrap;
+}
+
+.bot-hours-scale span:last-child {
+    justify-self: end;
+}
+
+.screen--bots .stack {
+    margin-top: 26px;
 }
 
 .feed-head {
@@ -2695,15 +2910,6 @@ button {
 
     .gallery-caption {
         text-align: left;
-    }
-
-    .gen-list button {
-        grid-template-columns: 2.2em minmax(0, 1fr);
-    }
-
-    .gen-note {
-        grid-column: 2;
-        margin-top: -8px;
     }
 
     .products {

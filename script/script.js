@@ -1172,6 +1172,7 @@
                 flakes.forEach(snow);
                 if (flakes.length && !RM) snowTimer = setInterval(() => { if (!document.hidden) flakes.forEach(snow); }, 110);
                 $$('[data-term]', s.el).forEach((t) => {
+                    t.dispatchEvent(new Event('term:reset'));
                     $$('.tl', t).forEach((l, i) => l.style.setProperty('--i', i));
                     t.classList.remove('is-typing');
                 });
@@ -1218,7 +1219,10 @@
         if (push) history.pushState(null, '', `#${id}`);
         if (RM) {
             if (before) before();
-            if (morph) morph.z.remove();
+            if (morph) {
+                morph.z.remove();
+                if (morph.bd) morph.bd.remove();
+            }
             show(next);
             return true;
         }
@@ -1380,7 +1384,7 @@
     };
 
     // テレビから入るとき: 全面に広がった番組の板が、行き先のつなぐ部分へ縮んでおさまり、まわりの部品がちらついて出る
-    function morphIn(next, { z, r, at, src }) {
+    function morphIn(next, { z, bd, r, at, src }) {
         busy = true;
         const containers = [next.el, dock];
         containers.forEach((c) => c.classList.add('is-forming'));
@@ -1401,6 +1405,11 @@
         setTimeout(() => playIn(parts, containers, false), 160);
         setTimeout(() => page.type(next), DUR * MOVE - 120);
         let swapped = false;
+        // 幕(スマホで上下の余りを埋めていた色)は、板が縮み始めると引いて、組み上がるページを見せる
+        if (bd) {
+            bd.getAnimations().forEach((a) => a.cancel());
+            bd.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR * .35, easing: 'ease-out', fill: 'forwards' }).finished.then(() => bd.remove());
+        }
         tween(DUR, (p) => {
             plateAt(z, at, to, easeIO(Math.min(1, p / MOVE)));
             // 入れ替わり: なめらかに薄めず、段で行き来させる(テレビの信号が乱れて切り替わる感じ)
@@ -1467,7 +1476,9 @@
             show(top);
             const screenEl = tv.screen, topEl = top.el;
             const sr = screenEl.getBoundingClientRect(), tr = topEl.getBoundingClientRect();
-            const k = Math.max(W / sr.width, H / sr.height);
+            // 入るときと同じく、縦長のスマホでは覆わずに幅いっぱいまで寄る(上下にはテレビの筐体が見える)
+            const cover = Math.max(W / sr.width, H / sr.height), fit = Math.min(W / sr.width, H / sr.height);
+            const k = cover / fit > 1.15 ? fit : cover;
             const px = sr.left + sr.width / 2, py = sr.top + sr.height / 2;
             const dx = W / 2 - px, dy = H / 2 - py;
             topEl.style.transformOrigin = `${px - tr.left}px ${py - tr.top}px`;
@@ -2256,16 +2267,20 @@
             }
             // 番組を写しとった板を、画面の位置から全面まで拡大する(縦横比は保ったまま、はみ出す分は切れる)。
             // 全面になったら、その板が行き先の画面の、番組と同じ役目の部分(経歴なら端末)へ縮んでおさまる
-            const { z, r, full, at } = plate(c);
+            const { z, bd, r, full, at } = plate(c);
             busy = true;
             glitch.burst(160, r); // 写しの板に替わる瞬間も、グリッチでごまかす
+            if (bd) bd.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' });
             z.animate([
                 { transform: `translate(${r.left}px, ${r.top}px) scale(1)`, borderRadius: '24px' },
                 { transform: full, borderRadius: '0px' },
             ], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' }).finished.then(() => {
                 busy = false;
                 const shown = $('img.is-on', c.prog);
-                if (!go(c.id, { morph: { z, r, at, src: shown && shown.getAttribute('src') } })) z.remove();
+                if (!go(c.id, { morph: { z, bd, r, at, src: shown && shown.getAttribute('src') } })) {
+                    z.remove();
+                    if (bd) bd.remove();
+                }
             });
         }
 
@@ -2283,9 +2298,21 @@
             scan.className = 'tv-scan';
             z.append(p, scan);
             document.body.appendChild(z);
-            const k = Math.max(innerWidth / r.width, innerHeight / r.height);
+            // 画面いっぱいに覆う倍率。縦長のスマホでは覆うと左右が大きくはみ出すので、
+            // 幅に合わせて収め、上下の余りは番組と同じ色の幕で埋める
+            const cover = Math.max(innerWidth / r.width, innerHeight / r.height);
+            const fit = Math.min(innerWidth / r.width, innerHeight / r.height);
+            let k = cover, bd = null;
+            if (cover / fit > 1.15) {
+                k = fit;
+                bd = document.createElement('div');
+                bd.className = 'tv-zoom-bd';
+                const bg = getComputedStyle(p).backgroundColor;
+                bd.style.background = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' ? bg : '#0d0d0d';
+                document.body.insertBefore(bd, z);
+            }
             const fx = (innerWidth - r.width * k) / 2, fy = (innerHeight - r.height * k) / 2;
-            return { z, r, k, full: `translate(${fx}px, ${fy}px) scale(${k})`, at: { x: fx, y: fy, s: k, b: 0, rad: 0 } };
+            return { z, bd, r, k, full: `translate(${fx}px, ${fy}px) scale(${k})`, at: { x: fx, y: fy, s: k, b: 0, rad: 0 } };
         }
 
         links.forEach((a) => {
@@ -2517,22 +2544,69 @@
         });
     });
 
+    /* 版を替えるとき: ビデオの早送り・巻きもどしのように、画面が W と S の砂嵐になって流れ、
+       左上に ◀◀ v1(古い版へ)/ ▶▶ v3(新しい版へ)と出る。砂嵐が引くと、新しい版の画面がちらついて出る */
+    const travel = (media, label, back) => {
+        $$('.gen-snow, .gen-osd', media).forEach((el) => el.remove());
+        clearInterval(media._snow);
+        clearTimeout(media._osd);
+        const osd = document.createElement('span');
+        osd.className = 'gen-osd';
+        osd.setAttribute('aria-hidden', 'true');
+        osd.textContent = `${back ? '◀◀' : '▶▶'} ${label}`;
+        media.append(osd);
+        const done = () => {
+            osd.textContent = label;
+            media._osd = setTimeout(() => osd.classList.add('is-out'), 900);
+            osd.addEventListener('transitionend', () => osd.remove(), { once: true });
+        };
+        if (RM) return done();
+        const snow = document.createElement('span');
+        snow.className = `gen-snow${back ? ' is-back' : ''}`;
+        snow.setAttribute('aria-hidden', 'true');
+        media.append(snow);
+        const r = media.getBoundingClientRect();
+        const cols = Math.ceil(r.width / 5) + 2, rows = Math.ceil(r.height / 8) + 2;
+        const fill = () => {
+            let t = '';
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const v = Math.random();
+                    t += v < .3 ? 'W' : v < .6 ? 'S' : ' ';
+                }
+                t += '\n';
+            }
+            snow.textContent = t;
+        };
+        fill();
+        media._snow = setInterval(fill, 50);
+        setTimeout(() => {
+            clearInterval(media._snow);
+            snow.classList.add('is-out');
+            setTimeout(() => snow.remove(), 200);
+            flicker(media);
+            done();
+        }, 480);
+    };
+
     $$('[data-tabs]').forEach((list) => {
         const tabs = $$('[role="tab"]', list);
         // 使っているもの: 版によって違う行(data-gen)は、選んだ版の分だけ出す
         const genRows = (tab) => {
             const v = $('.gen-v', tab)?.textContent.trim();
-            const body = list.closest('.work-body');
+            const body = list.closest('.screen');
             if (v && body) $$('[data-gen]', body).forEach((row) => { row.hidden = !row.dataset.gen.split(' ').includes(v); });
         };
         const select = (tab, focus) => {
+            const from = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+            const to = tabs.indexOf(tab);
             tabs.forEach((t) => {
                 const on = t === tab;
                 t.setAttribute('aria-selected', on);
                 t.tabIndex = on ? 0 : -1;
                 const panel = document.getElementById(t.getAttribute('aria-controls'));
                 panel.hidden = !on;
-                if (on) flicker($('.media', panel));
+                if (on && from !== to) travel($('.media', panel), $('.gen-v', t).textContent.trim(), to < from);
             });
             genRows(tab);
             if (focus) tab.focus();
@@ -2553,6 +2627,261 @@
             }
         });
     });
+
+    /* ----------------------------------------------------------------------
+       経歴の端末: 最後の行に打ちこめる。help で一覧(載せていないコマンドもある。sl とか)。
+       見えない <input> を最後の行に重ねて、打った文字とカーソルは端末の書き方で見せる。
+       画面に入り直すと、打った分は消えて元の表示にもどる
+       ---------------------------------------------------------------------- */
+    (() => {
+        const term = $('#about [data-term]');
+        const line = term && $('.term-prompt', term);
+        if (!line) return;
+        const input = $('.term-input', line), typed = $('.term-typed', line);
+        const PS = $('.ps', line).outerHTML;
+        const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        let hist = [], hi = 0, running = false;
+
+        const put = (html, cls = 'tl-out') => {
+            const p = document.createElement('p');
+            p.className = `tl is-live ${cls}`;
+            p.innerHTML = html;
+            line.before(p);
+            return p;
+        };
+        const pre = (text, cls = '') => put(esc(text), `tl-out tl-pre ${cls}`);
+        const show = () => line.scrollIntoView({ block: 'nearest' });
+        const sync = () => {
+            typed.textContent = input.value;
+            line.classList.toggle('has-text', !!input.value);
+            input.setSelectionRange(input.value.length, input.value.length);
+        };
+
+        const WORKS = { 'nagai-kotoba-database': 'work-nagai', 'wsws-bookshelf': 'work-bookshelf', romberg: 'work-romberg', 'nagai-kotoba-bot': 'bots' };
+        const worksLs = () => put(Object.entries(WORKS).map(([n, id]) => `<a href="#${id}" data-go="${id}">${n}/</a>`).join(''), 'tl-out term-ls');
+        const FILES = {
+            'career.txt': '2026.04  東京の IT 企業で働きはじめる\n2024.04  岡山大学大学院 環境生命自然科学研究科\n2020.04  岡山大学 工学部 情報系学科\n2001.04  オギャー',
+            'now.txt': "仕事のかたわら、個人でウェブサイトや bot を作っています。読んだ本は WSWS'S BOOKSHELF. に記録しています。",
+        };
+        const age = () => {
+            const d = new Date();
+            return d.getFullYear() - 2001 - (d.getMonth() < 3 ? 1 : 0);
+        };
+
+        const CMDS = {
+            help() {
+                pre('使えるコマンド:\n  ls  cat  cd  whoami  pwd  date  echo  history  clear  neofetch  git log  exit');
+                put('# ほかにもあるかもしれない', 'tl-comment');
+            },
+            ls(a) {
+                const t = (a[0] || '').replace(/\/$/, '');
+                if (t === 'works') return worksLs();
+                if (t === 'skills') return pre('backend/  database/  frontend/  infra/  nlp/');
+                if (t && !FILES[t] && t !== 'research.txt') return pre(`ls: '${t}' にアクセスできない: そのようなファイルやディレクトリはない`);
+                put('career.txt  now.txt  research.txt  <b class="tl-dir">skills/</b>  <b class="tl-dir">works/</b>', 'tl-out tl-pre');
+            },
+            cat(a) {
+                const f = a[0];
+                if (!f) return pre('cat: ファイル名がない');
+                if (f === 'research.txt') {
+                    pre('大学院では、自然言語処理を研究していました。\nBERT とか、Transformer の LLM とかを、PyTorch で動かしていました。');
+                    return put('テーマ: <span class="redact" style="--w:9em"><span class="sr-only">非公開</span><span aria-hidden="true">WSWSWSWSWSWS</span></span>');
+                }
+                if (/^(works|skills)\/?$/.test(f)) return pre(`cat: ${f}: ディレクトリだ`);
+                pre(FILES[f] || `cat: ${f}: そのようなファイルはない`);
+            },
+            cd(a) {
+                const t = (a[0] || '').replace(/^(\.\/)?(works\/)?/, '').replace(/\/$/, '');
+                if (!t || t === '~' || t === '.') return;
+                if (t === '..' || t === '/') return CMDS.exit();
+                if (WORKS[t]) return go(WORKS[t], { origin: centerOf(line) });
+                if (t === 'works' || t === 'skills') return pre(`cd: 中身は ls ${t} で見られる`);
+                pre(`cd: ${t}: そのようなディレクトリはない`);
+            },
+            whoami: () => pre('わそわそ'),
+            pwd: () => pre('/home/wsws'),
+            hostname: () => pre('works'),
+            uname: () => pre('WSWS.WORKS'),
+            date: () => pre(new Date().toLocaleString('ja-JP', { dateStyle: 'full', timeStyle: 'medium' })),
+            echo: (a) => pre(a.join(' ')),
+            history: () => pre(hist.map((h, i) => `${String(i + 1).padStart(4)}  ${h}`).join('\n') || ''),
+            clear() {
+                $$('.is-live', term).forEach((el) => el.remove());
+                term.classList.add('is-cleared');
+            },
+            neofetch() {
+                const art = ['W   W  SSSS', 'W   W  S   ', 'W W W  SSSS', 'WW WW     S', 'W   W  SSSS'];
+                const info = ['<b class="tl-user">wsws</b>@<b class="tl-user">works</b>', '----------', '<b class="tl-key">OS</b>: WSWS.WORKS', '<b class="tl-key">Host</b>: 東京', `<b class="tl-key">Uptime</b>: ${age()} years`, '<b class="tl-key">Shell</b>: wsh(たぶん動く)'];
+                const n = Math.max(art.length, info.length);
+                put(Array.from({ length: n }, (_, i) => `<span class="tl-art">${(art[i] || '').padEnd(11)}</span>   ${info[i] || ''}`).join('\n'), 'tl-out tl-pre');
+            },
+            git(a) {
+                if (a[0] !== 'log') return pre(a[0] ? `git: '${a[0]}' は git のコマンドではない` : 'usage: git log');
+                put([['3f9a2c1', '2026.04', '東京の IT 企業で働きはじめる', true], ['8b1e7d4', '2026.03', '岡山大学大学院 修了'], ['c27a5f0', '2024.04', '岡山大学大学院に進学'], ['e91d2b6', '2024.03', '岡山大学 卒業'], ['5d40e9b', '2020.04', '岡山大学に入学'], ['0a6c3e8', '2020.03', '大阪の高校を卒業'], ['0000001', '2001.04', 'オギャー']]
+                    .map(([h, d, t, head]) => `<span class="tl-git">*</span> <span class="glog-hash">${h}</span>${head ? ' <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span>' : ''} ${d} ${t}`).join('\n'), 'tl-out tl-pre');
+            },
+            exit: () => go(cur.parent || 'top'),
+            // 載せていないもの
+            sl,
+            sudo: () => pre('wsws is not in the sudoers file. This incident will be reported.'),
+            rm: () => pre('rm: やめておいた'),
+            vim: () => pre('前に開いて、出られなくなった。今回は開かない'),
+            mecab: () => pre('mecab: ここには入っていない(長い言葉のデータベースのサーバーにはいる)'),
+            claude: () => pre('ここにはいない。いつもは隣の端末にいる'),
+            man: (a) => pre(`${a[0] || 'man'} の説明書はない。触ればわかる(わからない)`),
+        };
+        CMDS.vi = CMDS.nvim = CMDS.vim;
+        CMDS.cls = CMDS.clear;
+        CMDS.logout = CMDS.exit;
+
+        // sl: 汽車が右から左へ走り抜ける。煙は W と S。走っている間は打てない(本物の sl も止められない)
+        function sl() {
+            const SMOKE = [
+                ['        (W)   ( S )    (WS)     ( W )', '    (S)     (W)'],
+                ['      ( S )    (WS)    ( W )   (S)', '     (W)     ( S )'],
+            ];
+            const BODY = [
+                '     ___',
+                '    |   |              _______',
+                ' ___|___|_____________|  [ ]  |      __________________________',
+                '|  WSWS.WORKS EXPRESS |       |=====|  [ ]   [ ]   [ ]   [ ]   |',
+                '|_____________________________|=====|__________________________|',
+                ' \\__(O)==(O)==(O)______(O)___/         (O)  (O)        (O)  (O)',
+            ];
+            const SPOKES = ['(|)', '(/)', '(-)', '(\\)'];
+            const W = Math.max(...BODY.map((l) => l.length));
+            const frame = (k) => [...SMOKE[(k >> 2) % 2], ...BODY.map((l) => l.replaceAll('(O)', SPOKES[k % 4]))].map((l) => l.padEnd(W)).join('\n');
+            const track = put('', 'term-sl-track');
+            const car = document.createElement('span');
+            car.className = 'term-sl';
+            car.setAttribute('aria-hidden', 'true');
+            track.append(car);
+            put('# 汽車が通っていった', 'tl-comment sr-only');
+            const ch = (() => {
+                const m = document.createElement('span');
+                m.textContent = '0'.repeat(20);
+                track.append(m);
+                const w = m.getBoundingClientRect().width / 20;
+                m.remove();
+                return w || 8;
+            })();
+            const cols = Math.ceil(track.clientWidth / ch);
+            running = true;
+            input.disabled = true;
+            show();
+            return new Promise((done) => {
+                let x = cols, k = 0;
+                const step = () => {
+                    car.textContent = frame(k++);
+                    car.style.transform = `translateX(${x * ch}px)`;
+                    x -= RM ? 4 : 1;
+                    if (x > -W) setTimeout(step, RM ? 60 : 28);
+                    else {
+                        track.remove();
+                        running = false;
+                        input.disabled = false;
+                        input.focus({ preventScroll: true });
+                        done();
+                    }
+                };
+                step();
+            });
+        }
+
+        function run(raw) {
+            const cmd = raw.trim();
+            put(`${PS} ${esc(raw)}`, '');
+            if (cmd) {
+                hist.push(cmd);
+                const [name, ...args] = cmd.split(/\s+/);
+                const f = Object.prototype.hasOwnProperty.call(CMDS, name) ? CMDS[name] : null;
+                if (f) f(args);
+                else pre(`${name}: コマンドが見つからない`);
+            }
+            hi = hist.length;
+            show();
+        }
+
+        // Tab: コマンド名とファイル名を補う
+        function complete() {
+            const v = input.value, parts = v.split(/\s+/), last = parts.pop();
+            const pool = parts.length ? ['career.txt', 'now.txt', 'research.txt', 'skills/', 'works/', ...Object.keys(WORKS).map((n) => `works/${n}/`)] : ['ls', 'cat', 'cd', 'whoami', 'pwd', 'date', 'echo', 'history', 'clear', 'neofetch', 'git', 'exit', 'help'];
+            const hits = pool.filter((p) => p.startsWith(last));
+            if (hits.length === 1) input.value = [...parts, hits[0]].join(' ') + (hits[0].endsWith('/') ? '' : ' ');
+            else if (hits.length > 1) {
+                put(`${PS} ${esc(v)}`, '');
+                pre(hits.join('  '));
+            }
+            sync();
+        }
+
+        input.addEventListener('input', sync);
+        input.addEventListener('keydown', (e) => {
+            if (running) return e.preventDefault();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const v = input.value;
+                input.value = '';
+                sync();
+                run(v);
+            } else if (e.key === 'Tab' && input.value) {
+                e.preventDefault();
+                complete();
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                hi = clamp(hi + (e.key === 'ArrowUp' ? -1 : 1), 0, hist.length);
+                input.value = hist[hi] || '';
+                sync();
+            } else if (e.key === 'l' && e.ctrlKey) {
+                e.preventDefault();
+                CMDS.clear();
+            } else if (e.key === 'c' && e.ctrlKey && !getSelection().toString()) {
+                e.preventDefault();
+                put(`${PS} ${esc(input.value)}^C`, '');
+                input.value = '';
+                sync();
+            } else if (e.key === 'Escape') input.blur();
+        });
+        ['keyup', 'click', 'select'].forEach((t) => input.addEventListener(t, sync));
+        input.addEventListener('focus', () => term.classList.add('is-focus'));
+        input.addEventListener('blur', () => term.classList.remove('is-focus'));
+        // 端末のどこを押しても打てるように(リンクを押したときと、文字を選んだときは除く)
+        term.addEventListener('click', (e) => {
+            if (e.target.closest('a, button, .redact') || getSelection().toString()) return;
+            input.focus({ preventScroll: true });
+        });
+        // 画面に入り直したら、元の表示にもどす
+        term.addEventListener('term:reset', () => {
+            if (running) return;
+            $$('.is-live', term).forEach((el) => el.remove());
+            term.classList.remove('is-cleared');
+            input.value = '';
+            sync();
+            hi = hist.length;
+        });
+    })();
+
+    /* ----------------------------------------------------------------------
+       ボット: 次の投稿(毎時 0 分、日本時間)までの残りと、今日の 24 回のうち済んだ回。
+       1 秒ごとに書き換える(タブが見えていないときは休む)
+       ---------------------------------------------------------------------- */
+    (() => {
+        const box = $('[data-bot-clock]');
+        if (!box) return;
+        const left = $('[data-bot-left]', box), cells = $$('.bot-hours li', box);
+        const tick = () => {
+            if (document.hidden) return;
+            const jst = new Date(Date.now() + 9 * 3600e3); // UTC の関数で読むと日本時間になる
+            const h = jst.getUTCHours(), rest = 3600 - jst.getUTCMinutes() * 60 - jst.getUTCSeconds();
+            left.textContent = `${String(Math.floor(rest / 60)).padStart(2, '0')}:${String(rest % 60).padStart(2, '0')}`;
+            cells.forEach((c, i) => {
+                c.classList.toggle('is-done', i <= h);
+                c.classList.toggle('is-next', i === (h + 1) % 24 && h < 23);
+            });
+        };
+        setInterval(tick, 1000);
+        tick();
+    })();
 
     /* ----------------------------------------------------------------------
        ボット: Bluesky の公開 API から最新の投稿を読む。読めなければ投稿の例のまま

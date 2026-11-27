@@ -481,7 +481,8 @@ button {
     text-align: left;
     letter-spacing: .02em;
     -webkit-tap-highlight-color: transparent;
-    touch-action: pan-y;
+    /* 左右に払ってチャンネルを替えるので、画面の上ではスクロールもズームもさせない(縦に少し動いても、テレビがずれないように) */
+    touch-action: none;
 }
 
 /* ブラウン管のふくらみと、ガラスの映りこみ */

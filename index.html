@@ -13,14 +13,37 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200..800&family=Inter:wght@400;500;600&family=Unbounded:wght@400..900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Web フォントの CSS は最初の描画を止めないよう、あとから効かせる(届くまでは手元の書体で出す)。使う太さだけ読む -->
+    <link id="webfonts" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500..800&family=Inter:wght@400;500;600&family=Unbounded:wght@600..700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500..800&family=Inter:wght@400;500;600&family=Unbounded:wght@600..700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="./styles/style.css">
     <script>
         // 導入アニメーションの準備。script.js が 4 秒以内に始まらなければ導入をやめて本文を出す
         (function () {
             var d = document.documentElement;
             d.classList.add('js');
-            if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                // 導入がないときは、Web フォントが届くまで(最大 0.8 秒)白で待つ。届く前の書体が一瞬見えて、差し替わらないように
+                d.classList.add('is-fontwait');
+                var done = function () { d.classList.remove('is-fontwait'); };
+                setTimeout(done, 800);
+                var l = document.getElementById('webfonts');
+                var ready = function () {
+                    if (!document.fonts) return done();
+                    Promise.all([
+                        document.fonts.load('400 16px "Inter"', 'A'),
+                        document.fonts.load('400 16px "Zen Kaku Gothic New"', 'あ'),
+                        document.fonts.load('700 16px "Unbounded"', 'W'),
+                        document.fonts.load('600 16px "Inter Tight"', 'W'),
+                    ]).then(function () { return document.fonts.ready; }).then(done, done);
+                };
+                if (!l || l.media === 'all') ready();
+                else {
+                    l.addEventListener('load', function () { setTimeout(ready, 0); });
+                    l.addEventListener('error', done);
+                }
+                return;
+            }
             d.classList.add('is-intro');
             setTimeout(function () { if (!window.__wsIntro) d.classList.remove('is-intro'); }, 4000);
         })();
@@ -96,7 +119,7 @@
                 番組表は画面には出さず、読み上げとキーボード操作のための目次として残す(キーボードで入ったときだけ見える)。
                 チャンネルを足すときは、番組表(.tv-list)に <li> を、画面(.tv-content)に .tv-prog を、同じ data-ch で足す。
                 つまみの目盛りはチャンネルの数だけ並ぶ(6 より少ないときは 6)。番組のない番号は砂嵐になる。
-                右の小さな画面の絵(ASCII アート)は script.js の MINI_ART に、行き先の画面の id で足す。
+                右の小さな画面の 3D の絵は、script.js の mini3d の SCENES に、行き先の画面の id で足す(ないときはチャンネルの番号を映す)。
             -->
             <div class="tv-set">
                 <div class="tv" data-part="box">
@@ -250,10 +273,10 @@
                         </div>
                         <div class="gallery-foot" data-part="text">
                             <ul class="gallery-thumbs">
-                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v1-top.jpg" data-alt="v1 トップページ。和風の壁紙と挿絵" data-caption="トップ" aria-label="トップ"><img src="images/works/nagai-v1-top.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v1-list.jpg" data-alt="v1 単語一覧ページ。表形式の一覧と絞り込み検索欄" data-caption="単語一覧と絞り込み検索" aria-label="単語一覧と絞り込み検索"><img src="images/works/nagai-v1-list.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v1-stats.jpg" data-alt="v1 統計ページ。登録数の推移グラフ" data-caption="統計（登録数の推移）" aria-label="統計（登録数の推移）"><img src="images/works/nagai-v1-stats.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v1-heatmap.jpg" data-alt="v1 統計ページ。先頭文字と末尾文字のヒートマップ" data-caption="先頭・末尾文字のヒートマップ" aria-label="先頭・末尾文字のヒートマップ"><img src="images/works/nagai-v1-heatmap.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v1-top.jpg" data-alt="v1 トップページ。和風の壁紙と挿絵" data-caption="トップ" aria-label="トップ"><img src="images/works/thumbs/nagai-v1-top.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v1-list.jpg" data-alt="v1 単語一覧ページ。表形式の一覧と絞り込み検索欄" data-caption="単語一覧と絞り込み検索" aria-label="単語一覧と絞り込み検索"><img src="images/works/thumbs/nagai-v1-list.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v1-stats.jpg" data-alt="v1 統計ページ。登録数の推移グラフ" data-caption="統計（登録数の推移）" aria-label="統計（登録数の推移）"><img src="images/works/thumbs/nagai-v1-stats.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v1-heatmap.jpg" data-alt="v1 統計ページ。先頭文字と末尾文字のヒートマップ" data-caption="先頭・末尾文字のヒートマップ" aria-label="先頭・末尾文字のヒートマップ"><img src="images/works/thumbs/nagai-v1-heatmap.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
                             </ul>
                             <p class="gallery-caption">トップ</p>
                         </div>
@@ -266,10 +289,10 @@
                         </div>
                         <div class="gallery-foot" data-part="text">
                             <ul class="gallery-thumbs">
-                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v2-top.jpg" data-alt="v2 トップページ。和紙調の背景に5つの入口カード" data-caption="トップ" aria-label="トップ"><img src="images/works/nagai-v2-top.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v2-list.jpg" data-alt="v2 単語一覧ページ。札の形をした並べ替えボタン" data-caption="単語一覧と並べ替え" aria-label="単語一覧と並べ替え"><img src="images/works/nagai-v2-list.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v2-stats.jpg" data-alt="v2 統計ページ。累積総数と日別追加数のグラフ" data-caption="統計（登録数の推移）" aria-label="統計（登録数の推移）"><img src="images/works/nagai-v2-stats.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v2-theme.jpg" data-alt="v2 背景テーマを「籠」に切り替えた単語一覧" data-caption="背景テーマの切り替え" aria-label="背景テーマの切り替え"><img src="images/works/nagai-v2-theme.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v2-top.jpg" data-alt="v2 トップページ。和紙調の背景に5つの入口カード" data-caption="トップ" aria-label="トップ"><img src="images/works/thumbs/nagai-v2-top.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v2-list.jpg" data-alt="v2 単語一覧ページ。札の形をした並べ替えボタン" data-caption="単語一覧と並べ替え" aria-label="単語一覧と並べ替え"><img src="images/works/thumbs/nagai-v2-list.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v2-stats.jpg" data-alt="v2 統計ページ。累積総数と日別追加数のグラフ" data-caption="統計（登録数の推移）" aria-label="統計（登録数の推移）"><img src="images/works/thumbs/nagai-v2-stats.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v2-theme.jpg" data-alt="v2 背景テーマを「籠」に切り替えた単語一覧" data-caption="背景テーマの切り替え" aria-label="背景テーマの切り替え"><img src="images/works/thumbs/nagai-v2-theme.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
                             </ul>
                             <p class="gallery-caption">トップ</p>
                         </div>
@@ -278,15 +301,15 @@
                 <div class="gen-panel" role="tabpanel" id="panel-v3" aria-labelledby="tab-v3">
                     <div class="gallery" data-gallery>
                         <div class="media" data-part="box">
-                            <img class="gallery-img" src="images/works/nagai-v3-home.jpg" alt="v3 トップページ。検索窓と収録語数を大きく表示" width="1280" height="800" decoding="async">
+                            <img class="gallery-img" src="images/works/nagai-v3-home.jpg" alt="v3 トップページ。円のロゴと検索窓、ジャンルや読みの長さから探す入口" width="1280" height="800" decoding="async">
                         </div>
                         <div class="gallery-foot" data-part="text">
                             <ul class="gallery-thumbs">
-                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v3-home.jpg" data-alt="v3 トップページ。検索窓と収録語数を大きく表示" data-caption="トップ" aria-label="トップ"><img src="images/works/nagai-v3-home.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v3-ranking.jpg" data-alt="v3 ランキングページ。読みが長い言葉など11の指標" data-caption="ランキング" aria-label="ランキング"><img src="images/works/nagai-v3-ranking.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v3-stats.jpg" data-alt="v3 収録統計ページ。頻出の語を大きさで示すワードクラウド" data-caption="収録統計" aria-label="収録統計"><img src="images/works/nagai-v3-stats.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v3-genres.jpg" data-alt="v3 ジャンルページ。大・中・小の階層で分類を辿れる" data-caption="ジャンル" aria-label="ジャンル"><img src="images/works/nagai-v3-genres.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                                <li><button type="button" data-src="images/works/nagai-v3-dark.jpg" data-alt="v3 単語一覧ページのダークモード表示" data-caption="ダークモード" aria-label="ダークモード"><img src="images/works/nagai-v3-dark.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" class="is-active" aria-current="true" data-src="images/works/nagai-v3-home.jpg" data-alt="v3 トップページ。円のロゴと検索窓、ジャンルや読みの長さから探す入口" data-caption="トップ" aria-label="トップ"><img src="images/works/thumbs/nagai-v3-home.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v3-word.jpg" data-alt="v3 単語の詳細ページ。読みの文字数と、読みの音を円に結んだ図" data-caption="単語の詳細" aria-label="単語の詳細"><img src="images/works/thumbs/nagai-v3-word.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v3-stats.jpg" data-alt="v3 収録統計ページ。頻出の語を大きさで示すワードクラウド" data-caption="収録統計" aria-label="収録統計"><img src="images/works/thumbs/nagai-v3-stats.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v3-list.jpg" data-alt="v3 単語一覧ページ。キーワードと読みの文字数で絞り込み、一致した所に印" data-caption="絞り込みとハイライト" aria-label="絞り込みとハイライト"><img src="images/works/thumbs/nagai-v3-list.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                                <li><button type="button" data-src="images/works/nagai-v3-ranking.jpg" data-alt="v3 ランキングページ。読みが長い言葉など11の指標" data-caption="ランキング" aria-label="ランキング"><img src="images/works/thumbs/nagai-v3-ranking.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
                             </ul>
                             <p class="gallery-caption">トップ</p>
                         </div>
@@ -324,10 +347,10 @@
                     </div>
                     <div class="gallery-foot" data-part="text">
                         <ul class="gallery-thumbs">
-                            <li><button type="button" class="is-active" aria-current="true" data-src="images/works/bookshelf-hero.jpg" data-alt="WSWS&#x27;S BOOKSHELF. トップ。最新の一冊と読了本の帯" data-caption="トップ" aria-label="トップ"><img src="images/works/bookshelf-hero.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                            <li><button type="button" data-src="images/works/bookshelf-grid.jpg" data-alt="WSWS&#x27;S BOOKSHELF. 書棚のグリッド表示。ジャンルで絞り込み可能" data-caption="書棚" aria-label="書棚"><img src="images/works/bookshelf-grid.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                            <li><button type="button" data-src="images/works/bookshelf-detail.jpg" data-alt="WSWS&#x27;S BOOKSHELF. 書籍の詳細。評価と書誌情報" data-caption="書籍の詳細" aria-label="書籍の詳細"><img src="images/works/bookshelf-detail.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                            <li><button type="button" data-src="images/works/bookshelf-dark.jpg" data-alt="WSWS&#x27;S BOOKSHELF. ダークテーマのトップ" data-caption="ダークテーマ" aria-label="ダークテーマ"><img src="images/works/bookshelf-dark.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" class="is-active" aria-current="true" data-src="images/works/bookshelf-hero.jpg" data-alt="WSWS&#x27;S BOOKSHELF. トップ。最新の一冊と読了本の帯" data-caption="トップ" aria-label="トップ"><img src="images/works/thumbs/bookshelf-hero.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" data-src="images/works/bookshelf-grid.jpg" data-alt="WSWS&#x27;S BOOKSHELF. 書棚のグリッド表示。ジャンルで絞り込み可能" data-caption="書棚" aria-label="書棚"><img src="images/works/thumbs/bookshelf-grid.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" data-src="images/works/bookshelf-detail.jpg" data-alt="WSWS&#x27;S BOOKSHELF. 書籍の詳細。評価と書誌情報" data-caption="書籍の詳細" aria-label="書籍の詳細"><img src="images/works/thumbs/bookshelf-detail.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" data-src="images/works/bookshelf-dark.jpg" data-alt="WSWS&#x27;S BOOKSHELF. ダークテーマのトップ" data-caption="ダークテーマ" aria-label="ダークテーマ"><img src="images/works/thumbs/bookshelf-dark.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
                         </ul>
                         <p class="gallery-caption">トップ</p>
                     </div>
@@ -358,9 +381,9 @@
                     </div>
                     <div class="gallery-foot" data-part="text">
                         <ul class="gallery-thumbs">
-                            <li><button type="button" class="is-active" aria-current="true" data-src="images/works/romberg-graph.jpg" data-alt="ロンバーグ積分計算ツール。入力した数式のグラフ" data-caption="グラフ描画" aria-label="グラフ描画"><img src="images/works/romberg-graph.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                            <li><button type="button" data-src="images/works/romberg-trapezoid.jpg" data-alt="ロンバーグ積分計算ツール。台形に分割した積分区間と計算結果" data-caption="台形積分" aria-label="台形積分"><img src="images/works/romberg-trapezoid.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
-                            <li><button type="button" data-src="images/works/romberg-table.jpg" data-alt="ロンバーグ積分計算ツール。分割数ごとの近似値と誤差の表" data-caption="分割数ごとの誤差" aria-label="分割数ごとの誤差"><img src="images/works/romberg-table.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" class="is-active" aria-current="true" data-src="images/works/romberg-graph.jpg" data-alt="ロンバーグ積分計算ツール。入力した数式のグラフ" data-caption="グラフ描画" aria-label="グラフ描画"><img src="images/works/thumbs/romberg-graph.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" data-src="images/works/romberg-trapezoid.jpg" data-alt="ロンバーグ積分計算ツール。台形に分割した積分区間と計算結果" data-caption="台形積分" aria-label="台形積分"><img src="images/works/thumbs/romberg-trapezoid.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
+                            <li><button type="button" data-src="images/works/romberg-table.jpg" data-alt="ロンバーグ積分計算ツール。分割数ごとの近似値と誤差の表" data-caption="分割数ごとの誤差" aria-label="分割数ごとの誤差"><img src="images/works/thumbs/romberg-table.jpg" alt="" width="160" height="100" loading="lazy" decoding="async"></button></li>
                         </ul>
                         <p class="gallery-caption">グラフ描画</p>
                     </div>

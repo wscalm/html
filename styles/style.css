@@ -41,6 +41,11 @@ html.is-intro {
     overflow: hidden;
 }
 
+/* 導入がないとき、Web フォントが届くまで(最大 0.8 秒)本文を隠す。隠していても字の形は測られるので、書体の読み込みは進む */
+html.is-fontwait body {
+    visibility: hidden;
+}
+
 body {
     font-family: var(--f-sans);
     font-size: 15px;
@@ -229,6 +234,15 @@ button {
     -webkit-backdrop-filter: blur(14px) saturate(1.4);
     backdrop-filter: blur(14px) saturate(1.4);
     border-bottom-color: var(--line);
+}
+
+/* 指で触る端末では、後ろの W と S がひとりでに動くので、ぼかしはやめて白で隠す(ぼかしを毎コマ計算し直さない) */
+@media (hover: none) {
+    .site-header.is-scrolled {
+        background: rgba(255, 255, 255, .97);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
 }
 
 .logo {
@@ -736,15 +750,6 @@ button {
 .tv-link--wide {
     grid-column: 1 / -1;
     justify-content: center;
-}
-
-.tv-link.is-soon {
-    background: transparent;
-    border-style: dashed;
-}
-
-.tv-link.is-soon span {
-    color: #a3a3a0;
 }
 
 /* 小さなテレビでは、投稿の下のボタンを省き、端末の見出しを詰める */
@@ -1595,14 +1600,19 @@ button {
     transform: translate(2px, -2px);
 }
 
-/* ギャラリー */
+/* ギャラリー。作品の画面: スクリーンショットを黒い縁の画面に映す */
 .media {
     position: relative;
     aspect-ratio: 16 / 10;
     overflow: hidden;
-    border-radius: var(--radius);
+    border: clamp(8px, .8vw, 12px) solid #2b2b2b;
+    border-radius: 18px;
     background: var(--panel) center / cover no-repeat;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 24px 48px -24px rgba(0, 0, 0, .18);
+    background-clip: padding-box;
+    box-shadow:
+        inset 1px 2px 3px rgba(0, 0, 0, .55),
+        0 0 0 1px #222,
+        0 30px 50px -30px rgba(0, 0, 0, .55);
     cursor: pointer;
 }
 
@@ -1610,6 +1620,19 @@ button {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 8px / 10px;
+}
+
+.media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px / 10px;
+    pointer-events: none;
+    background:
+        linear-gradient(158deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .04) 26%, rgba(255, 255, 255, 0) 26.5%),
+        repeating-linear-gradient(180deg, rgba(0, 0, 0, .05) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, .45);
 }
 
 .media.is-switching img {
@@ -1634,8 +1657,8 @@ button {
     width: 60px;
     aspect-ratio: 16 / 10;
     overflow: hidden;
-    border-radius: 3px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, .08);
+    border: 3px solid #2b2b2b;
+    border-radius: 5px;
     opacity: .4;
     transition: opacity .3s;
 }
@@ -1666,16 +1689,15 @@ button {
    端末の画面(Ubuntu の色)、W と S のドット。背景の W と S は、文字の下では動かさず、文字に白いふちを付けて分ける(data-quiet)
    ========================================================================== */
 
-/* ドットのアイコンの元(<symbol>)。見えない所に置く */
-/* 背景の W と S の上に載る文字。字の形に沿った細い白いふちで、後ろの文字と分ける */
+/* 背景の W と S の上に載る文字。字の形に沿った細い白いふちで、後ろの文字と分ける。
+   ぼかした影は描くのが重い(ちらついて出るたびに描き直す)ので、2 枚だけ重ねる */
 [data-quiet] {
     text-shadow:
-        0 0 1px #fff,
         0 0 2px #fff,
-        0 0 3px #fff,
-        0 0 6px #fff;
+        0 0 5px #fff;
 }
 
+/* ドットのアイコンの元(<symbol>)。見えない所に置く */
 .sprite {
     position: absolute;
     width: 0;
@@ -1920,45 +1942,6 @@ button {
     100% { opacity: 1; translate: 0 440%; }
 }
 
-/* 作品の画面: スクリーンショットを黒い縁の画面に映す */
-.media {
-    border: clamp(8px, .8vw, 12px) solid #2b2b2b;
-    border-radius: 18px;
-    background-clip: padding-box;
-    box-shadow:
-        inset 1px 2px 3px rgba(0, 0, 0, .55),
-        0 0 0 1px #222,
-        0 30px 50px -30px rgba(0, 0, 0, .55);
-}
-
-.media img {
-    border-radius: 8px / 10px;
-}
-
-.media::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 8px / 10px;
-    pointer-events: none;
-    background:
-        linear-gradient(158deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .04) 26%, rgba(255, 255, 255, 0) 26.5%),
-        repeating-linear-gradient(180deg, rgba(0, 0, 0, .05) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, .45);
-}
-
-.gallery-thumbs button {
-    border: 3px solid #2b2b2b;
-    border-radius: 5px;
-    box-shadow: none;
-}
-
-.work-url {
-    display: block;
-    margin-top: 6px;
-    font: 500 12px / 1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    color: var(--faint);
-}
 
 /* ==========================================================================
    端末の画面(経歴・ボットのしくみ)。トップのテレビの 3 チャンネルと同じ Ubuntu の色
@@ -2049,10 +2032,6 @@ button {
 .term-name {
     font-weight: 700;
     color: #fff;
-}
-
-.term-comment {
-    color: #8f8f8f;
 }
 
 .term-cursor {
@@ -2223,13 +2202,6 @@ button {
     font-weight: 700;
     line-height: 1.7;
     color: #f4f4f4;
-}
-
-.glog-body {
-    font-family: var(--f-sans);
-    font-size: 13.5px;
-    line-height: 1.8;
-    color: #a8a8a8;
 }
 
 .tree {
@@ -2959,10 +2931,6 @@ button {
         font-size: 14.5px;
     }
 
-    .glog-body {
-        font-size: 13px;
-    }
-
     .tree-dir {
         min-width: 6.5em;
     }
@@ -3015,9 +2983,8 @@ button {
         gap: 4px;
         height: calc(56px + env(safe-area-inset-bottom));
         padding: 0 8px env(safe-area-inset-bottom);
-        background: rgba(255, 255, 255, .92);
-        -webkit-backdrop-filter: blur(14px);
-        backdrop-filter: blur(14px);
+        /* 背景のぼかし(backdrop-filter)は、後ろの W と S が動くたびに計算し直して重いので、ほぼ不透明の白にする */
+        background: rgba(255, 255, 255, .97);
         border-top: 1px solid var(--line);
     }
 

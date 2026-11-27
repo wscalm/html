@@ -22,6 +22,16 @@
     const rand = (a, b) => a + Math.random() * (b - a);
     const inOutCubic = (t) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
+    // Web フォントの CSS(あとから効かせている)が届くまで待つ。届かなくても、失敗したら先へ進む
+    const fontsCss = new Promise((res) => {
+        const l = document.getElementById('webfonts');
+        if (!l || l.media === 'all') return res();
+        l.addEventListener('load', () => setTimeout(res, 0), { once: true }); // onload で media が all になってから
+        l.addEventListener('error', res, { once: true });
+    });
+    // 書体がそろったとき(CSS が届いて、使う書体の読み込みが終わったとき)
+    const fontsReady = document.fonts ? fontsCss.then(() => document.fonts.ready) : fontsCss;
+
     const header = $('.site-header');
     const dock = $('.dock');
 
@@ -79,8 +89,8 @@
         const RIPS = 8; // 同時に広がる波の数
         const QN = 64; // 丘と波を止める四角(行ごと)の数の上限(data-quiet)
         const T0 = performance.now();
-        // ほとんど止まっている絵なので、描いた内容を保つ(見えない間に描いた分が消えないように)
-        const gl = cvs.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
+        // 毎回全面を描き直すので、描いた内容は保たない(保つと、コマごとに余分な写しが走る)
+        const gl = cvs.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false });
 
         // WebGL が使えないときは、向きの変わらない文字を一度だけ描く
         function flat() {
@@ -100,7 +110,7 @@
                 }
             };
             build();
-            if (document.fonts) document.fonts.ready.then(build);
+            fontsReady.then(build);
             return { build };
         }
 
@@ -163,15 +173,16 @@
                 gl_FragColor = vec4(vec3(0.0667) * a, a);
             }`;
 
-        let prog, buf, tex, U = {}, count = 0, W = 0, H = 0, raf = 0, last = 0, alive = 0, ri = 0, qn = 0;
+        let prog, buf, tex, U = {}, count = 0, W = 0, H = 0, raf = 0, last = 0, alive = 0, ri = 0, qn = 0, paused = false;
         const rip = new Float32Array(RIPS * 4), qbuf = new Float32Array(QN * 4);
         const st = { seen: false, mx: 0, my: 0, tx: 0, ty: 0, aim: 0, aimT: 0, lift: 0, liftT: 0, lx: 0, ly: 0, acc: 0, lastEmit: 0 };
 
         // カーソルのない端末(スマホなど)では、見えないカーソルが画面の中をゆっくりさまよって、
         // 丘と波をひとりでに立てる。指で触っている間は指に従い、離して少したつと、その場からまたさまよう。
-        // 電池のため、さまよっている間は 30 コマ/秒で描く
+        // 電池のため、さまよっている間は 30 コマ/秒で描き、画面に入ったり触ったりしてから WANDER ミリ秒で休む
         const AUTO = !RM && matchMedia('(hover: none)').matches;
-        const wander = { on: false, x: 0, y: 0, vx: 0, vy: 0, gx: 0, gy: 0, nextGoal: 0, nextRip: 0, resume: 0 };
+        const WANDER = 15000;
+        const wander = { on: false, x: 0, y: 0, vx: 0, vy: 0, gx: 0, gy: 0, nextGoal: 0, nextRip: 0, resume: 0, until: 0 };
         function wanderStep(now, dt) {
             const w = wander;
             if (!w.on) {
@@ -258,17 +269,31 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         }
 
-        // 1 文字を 2 つの三角形で。マス目は導入と同じ(端は波で動いても欠けないよう 1 マス外まで)
+        // 1 文字を 2 つの三角形で。マス目は導入と同じ(端は波で動いても欠けないよう 1 マス外まで)。
+        // スマホでツールバーが出入りして高さだけ変わったときは、マス目は作り直さず、canvas の大きさだけ合わせる
+        // (マス目は画面の高さぶん余分に作っておく)
+        let gridW = 0, gridH = 0, gridCell = 0;
         function build() {
+            const cell = cellSize();
+            if (prog && innerWidth === gridW && cell === gridCell && innerHeight <= gridH) {
+                if (innerHeight === H) return;
+                H = innerHeight;
+                cvs.height = Math.round(H * DPR);
+                gl.viewport(0, 0, cvs.width, cvs.height);
+                draw();
+                return;
+            }
             W = innerWidth;
             H = innerHeight;
             cvs.width = Math.round(W * DPR);
             cvs.height = Math.round(H * DPR);
             gl.viewport(0, 0, cvs.width, cvs.height);
-            const cell = cellSize();
             tile = Math.ceil(cell * DPR);
             atlas();
-            const cols = Math.ceil(W / cell) + 2, rows = Math.ceil(H / cell) + 2;
+            gridW = W;
+            gridCell = cell;
+            gridH = AUTO || matchMedia('(hover: none)').matches ? Math.max(H, window.screen.height || 0) : H;
+            const cols = Math.ceil(W / cell) + 2, rows = Math.ceil(gridH / cell) + 2;
             const CORNERS = [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1];
             const data = new Float32Array(cols * rows * 30);
             let o = 0;
@@ -309,7 +334,12 @@
         }
 
         function frame(now) {
-            const wandering = AUTO && now > wander.resume;
+            // 演出が画面を覆っている間は描かない(終わったら kick で再開する)
+            if (paused) {
+                raf = 0;
+                return;
+            }
+            const wandering = AUTO && now > wander.resume && now < wander.until;
             if (wandering && now - last < 30) {
                 raf = requestAnimationFrame(frame);
                 return;
@@ -317,6 +347,10 @@
             const dt = Math.min(.05, (now - last) / 1000 || .016);
             last = now;
             if (wandering) wanderStep(now, dt);
+            else if (wander.on) { // さまようのを休む: 丘を下げて、落ち着いたら止まる
+                wander.on = false;
+                st.liftT = 0;
+            }
             // 丘はカーソルに少し遅れてなめらかについてくる
             const k = RM ? 1 : 1 - Math.exp(-dt * 10);
             st.mx += (st.tx - st.mx) * k;
@@ -326,7 +360,7 @@
             draw();
             const settled = Math.abs(st.tx - st.mx) < .2 && Math.abs(st.ty - st.my) < .2
                 && Math.abs(st.aimT - st.aim) < .002 && Math.abs(st.liftT - st.lift) < .002;
-            raf = settled && now > alive && !AUTO ? 0 : requestAnimationFrame(frame);
+            raf = settled && now > alive && !wandering ? 0 : requestAnimationFrame(frame);
         }
 
         const kick = () => {
@@ -410,30 +444,44 @@
             }
             return out;
         };
+        // 測った行の四角は、ページの座標でとっておく(ヘッダーともどるボタンは画面に固定なので、画面の座標のまま)。
+        // スクロールでは測り直さず、ずらして選び直すだけにする
         let quietEls = () => [];
+        let groups = [];
         function quiet(fn) {
             if (fn) quietEls = fn;
             if (!gl) return;
-            const cell = cellSize(), px = cell * .7, py = cell * .4;
-            const els = quietEls().filter((el) => {
-                if (!el) return false;
-                const r = el.getBoundingClientRect();
-                return r.width && r.height && r.bottom > -60 && r.top < innerHeight + 60;
+            const cell = cellSize(), sx = scrollX, sy = scrollY;
+            groups = quietEls().filter((el) => el && el.getClientRects().length).map((el) => {
+                const fixed = !!el.closest('.site-header, .dock');
+                const rs = mergeRects(lineRects(el), cell * 1.5);
+                if (!fixed) rs.forEach((o) => { o.l += sx; o.r += sx; o.t += sy; o.b += sy; });
+                return { fixed, rs };
             });
-            const groups = els.map((el) => mergeRects(lineRects(el), cell * 1.5));
+            place();
+        }
+        // いま見えている所の四角を選んで、シェーダーに渡す
+        function place() {
+            if (!gl) return;
+            const cell = cellSize(), px = cell * .7, py = cell * .4, sx = scrollX, sy = scrollY;
+            const vis = groups.map(({ fixed, rs }) => {
+                const dx = fixed ? 0 : sx, dy = fixed ? 0 : sy;
+                return rs.filter((o) => o.b - dy > -60 && o.t - dy < innerHeight + 60)
+                    .map((o) => ({ l: o.l - dx, t: o.t - dy, r: o.r - dx, b: o.b - dy }));
+            }).filter((g) => g.length);
             // 数が上限を超えるときは、大きいまとまりから外枠ひとつにまとめる
-            let total = groups.reduce((n, g) => n + g.length, 0);
-            const order = groups.map((g, i) => i).sort((a, b) => groups[b].length - groups[a].length);
+            let total = vis.reduce((n, g) => n + g.length, 0);
+            const order = vis.map((g, i) => i).sort((a, b) => vis[b].length - vis[a].length);
             for (const i of order) {
                 if (total <= QN) break;
-                const g = groups[i];
+                const g = vis[i];
                 if (g.length < 2) continue;
                 total -= g.length - 1;
-                groups[i] = [g.reduce((a, o) => ({ l: Math.min(a.l, o.l), t: Math.min(a.t, o.t), r: Math.max(a.r, o.r), b: Math.max(a.b, o.b) }))];
+                vis[i] = [g.reduce((a, o) => ({ l: Math.min(a.l, o.l), t: Math.min(a.t, o.t), r: Math.max(a.r, o.r), b: Math.max(a.b, o.b) }))];
             }
             qn = 0;
             qbuf.fill(0);
-            for (const o of groups.flat()) {
+            for (const o of vis.flat()) {
                 if (qn >= QN) break;
                 qbuf.set([o.l - px, o.t - py, o.r + px, o.b + py], qn * 4);
                 qn++;
@@ -441,14 +489,29 @@
             if (prog) kick();
         }
 
-        if (!gl || !init()) return { ...flat(), quiet() {} };
+        // 演出が画面を覆っている間は止める
+        function pause(on) {
+            paused = on;
+            if (!on && prog) kick();
+        }
+        // 画面に入ったときなど: さまよう端末では、しばらくまたさまよう
+        function wake() {
+            if (!AUTO) return;
+            wander.until = performance.now() + WANDER;
+            kick();
+        }
+
+        if (!gl || !init()) return { ...flat(), quiet() {}, place() {}, pause() {}, wake() {} };
         addEventListener('pointermove', point, { passive: true });
         addEventListener('pointerdown', point, { passive: true });
         // ウィンドウの外へ出たとき、指を離したとき(タッチにはカーソルが残らないため)は丘を下げる
         document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) lower(); });
         // さまよう端末では、指を離して少したったら、その場からまたさまよう
         const release = () => {
-            if (AUTO) wander.resume = performance.now() + 1800;
+            if (AUTO) {
+                wander.resume = performance.now() + 1800;
+                wander.until = wander.resume + WANDER;
+            }
             lower();
         };
         addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') release(); }, { passive: true });
@@ -460,18 +523,19 @@
         });
         cvs.addEventListener('webglcontextrestored', () => {
             init();
+            gridW = 0;
             build();
         });
 
         build();
-        if (AUTO) kick();
+        wake();
         if (document.fonts) {
-            document.fonts.load(`600 52px "Inter Tight"`, 'WS').then(() => {
+            fontsCss.then(() => document.fonts.load(`600 52px "Inter Tight"`, 'WS')).then(() => {
                 atlas();
                 draw();
             }, () => {});
         }
-        return { build, quiet };
+        return { build, quiet, place, pause, wake };
     })();
 
     /* ----------------------------------------------------------------------
@@ -545,12 +609,15 @@
         return max;
     }
 
-    // 部品に出る順の遅れを割り当てる。ロゴの文字は少し遅れて 1 文字ずつ
-    function stagger(parts, step) {
+    // 部品に出る順の遅れを割り当てる。ロゴの文字は少し遅れて 1 文字ずつ(gbase から gstep 秒ずつ)。
+    // fast はスキップしたときの短い遅れ
+    function stagger(parts, step, gbase = .08, gstep = .025) {
         let i = 0, gi = 0;
         parts.forEach((p) => {
             if (p.kind === 'glyph') {
-                p.delay = p.fast = .08 + gi++ * .025;
+                p.delay = gbase + gi * gstep;
+                p.fast = .08 + gi * .025;
+                gi++;
             } else {
                 p.delay = i * step;
                 p.fast = i * .035;
@@ -690,92 +757,91 @@
             intro: {
                 cover: 1.0, swap: 0, resolve: 2.9, settle: .7, reveal: 4.0,
                 step: .06, gbase: .25, gstep: .045, events: 70, evFrom: .2,
-                flashes: [1.74, 2.22], climax: [], // 画面全体が白黒反転する山場は、目に強すぎるのでやめた
+                flashes: [1.74, 2.22],
             },
             // トップから始まるとき: 画面の形ではなく、大きな W ひとつの形をつくる
             introW: {
                 cover: 1.0, swap: 0, resolve: 2.5, settle: .6, reveal: 3.3,
                 step: .06, gbase: .25, gstep: .045, events: 64, evFrom: .2,
-                flashes: [1.45, 1.9], climax: [],
+                flashes: [1.45, 1.9],
             },
             move: {
                 cover: .3, swap: .3, resolve: .52, settle: .3, reveal: .86,
                 step: .035, gbase: .1, gstep: .028, events: 4, evFrom: .05,
-                flashes: [], climax: [],
+                flashes: [],
             },
         };
         const lay = document.createElement('canvas');
+        // 演出の絵はどれも粗い W と S と四角なので、画素密度は 1.5 までにする(メモリと描く手間を抑える)
+        const FDPR = Math.min(DPR, 1.5);
         let W = 0, H = 0, cell = 12, cols = 0, rows = 0, noise = [], noiseKey = '';
         let run = null;
 
         const hash = (n) => { const s = Math.sin(n * 12.9898) * 43758.5453; return s - Math.floor(s); };
 
-        function prepare(c, w, h, dpr, weight, size) {
-            c.width = Math.round(w * dpr);
-            c.height = Math.round(h * dpr);
+        // 大きさが変わったときだけ確保し直す(同じなら消すだけ)
+        function prepare(c, w, h, dpr) {
+            const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+            if (c.width !== pw || c.height !== ph) {
+                c.width = pw;
+                c.height = ph;
+            }
             const g = c.getContext('2d');
+            g.setTransform(1, 0, 0, 1, 0, 0);
+            g.globalAlpha = 1;
+            g.clearRect(0, 0, pw, ph);
             g.setTransform(dpr, 0, 0, dpr, 0, 0);
-            g.font = `${weight} ${cell * size}px ${FONT}`;
-            g.textAlign = 'center';
-            g.textBaseline = 'alphabetic';
             return g;
         }
 
-        // 1 マスに W か S を 1 文字。濃さごとにまとめて描く
-        function fillCells(g, list) {
-            const byAlpha = new Map();
-            for (const [col, row, a] of list) {
-                if (!byAlpha.has(a)) byAlpha.set(a, []);
-                byAlpha.get(a).push(col, row);
+        // 1 マスに W か S を 1 文字。W と S を 1 度だけ描いた見本から写す(fillText を何千回も呼ばない)
+        function fillCells(g, list, dpr, weight, size) {
+            const bw = cell + 2 * Math.ceil(cell * .2), bh = bw, fs = cell * size; // マスより少し広い枠(左右の余りは整数にして、写すときにぼけないように)
+            const a = document.createElement('canvas');
+            a.width = Math.ceil(bw * 2 * dpr);
+            a.height = Math.ceil(bh * dpr);
+            const ag = a.getContext('2d');
+            ag.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ag.font = `${weight} ${fs}px ${FONT}`;
+            ag.textAlign = 'center';
+            ag.textBaseline = 'alphabetic';
+            ag.fillStyle = '#111';
+            ag.fillText('W', bw / 2, bh / 2 + cell * .29);
+            ag.fillText('S', bw * 1.5, bh / 2 + cell * .29);
+            const sw = bw * dpr, sh = bh * dpr;
+            for (const [col, row, al] of list) {
+                g.globalAlpha = al;
+                g.drawImage(a, Math.random() < .5 ? 0 : sw, 0, sw, sh, (col + .5) * cell - bw / 2, (row + .5) * cell - bh / 2, bw, bh);
             }
-            for (const [a, xy] of byAlpha) {
-                g.fillStyle = `rgba(17,17,17,${a})`;
-                for (let i = 0; i < xy.length; i += 2) {
-                    g.fillText(Math.random() < .5 ? 'W' : 'S', (xy[i] + .5) * cell, (xy[i + 1] + .5) * cell + cell * .29);
-                }
-            }
+            g.globalAlpha = 1;
         }
 
         function sizeUp() {
             W = innerWidth;
             H = innerHeight;
-            cvs.width = Math.round(W * DPR);
-            cvs.height = Math.round(H * DPR);
+            prepare(cvs, W, H, FDPR);
             cell = cellSize();
             cols = Math.ceil(W / cell);
             rows = Math.ceil(H / cell);
             const key = `${W}x${H}`;
             if (key === noiseKey) return;
             noiseKey = key;
-            const ldpr = Math.min(DPR, 1.5);
             noise = [0, 1].map((i) => {
                 const c = noise[i] || document.createElement('canvas');
-                const g = prepare(c, (cols + M * 2) * cell, (rows + M * 2) * cell, ldpr, 600, .8);
+                const g = prepare(c, (cols + M * 2) * cell, (rows + M * 2) * cell, FDPR);
                 const list = [];
                 for (let r = 0; r < rows + M * 2; r++) {
                     for (let col = 0; col < cols + M * 2; col++) {
                         if (Math.random() < .78) list.push([col, r, LV[(Math.random() ** 1.6 * LV.length) | 0]]);
                     }
                 }
-                fillCells(g, list);
+                fillCells(g, list, FDPR, 600, .8);
                 return c;
             });
         }
 
         function assignDelays(r, parts) {
-            let i = 0, gi = 0;
-            for (const p of parts) {
-                if (p.kind === 'glyph') {
-                    p.delay = r.cfg.gbase + gi * r.cfg.gstep;
-                    p.fast = .08 + gi * .025;
-                    gi++;
-                } else {
-                    p.delay = i * r.cfg.step;
-                    p.fast = i * .035;
-                    i++;
-                }
-            }
-            r.parts = parts;
+            r.parts = stagger(parts, r.cfg.step, r.cfg.gbase, r.cfg.gstep);
             r.end = r.cfg.reveal + parts.reduce((m, p) => Math.max(m, p.delay), 0) + .16;
         }
 
@@ -798,18 +864,36 @@
                 const d = g.getImageData(0, 0, cols, rows).data;
                 for (let i = 0; i < reg.length; i++) if (d[i * 4 + 3] > 100) reg[i] = pi;
             });
+            // 毎コマ塗る形なので、四角の数を減らす: allCut は横に続くマスをひとつに、cutA・cutB は同じ組が続く所をひとつに
             r.allCut = new Path2D();
             parts.forEach((p) => { p.cutA = new Path2D(); p.cutB = new Path2D(); });
             const list = [];
-            for (let i = 0; i < reg.length; i++) {
-                if (reg[i] < 0) continue;
-                const p = parts[reg[i]], col = i % cols, row = (i / cols) | 0;
-                const x = col * cell - .5, y = row * cell - .5;
-                (Math.random() < .5 ? p.cutA : p.cutB).rect(x, y, cell + 1, cell + 1);
-                r.allCut.rect(x, y, cell + 1, cell + 1);
-                list.push([col, row, p.alpha]);
+            for (let row = 0; row < rows; row++) {
+                let run0 = -1, seg0 = -1, segP = null, segAB = 0;
+                const flush = (end) => {
+                    if (segP) (segAB ? segP.cutA : segP.cutB).rect(seg0 * cell - .5, row * cell - .5, (end - seg0) * cell + 1, cell + 1);
+                    segP = null;
+                };
+                for (let col = 0; col <= cols; col++) {
+                    const pi = col < cols ? reg[row * cols + col] : -1;
+                    if (pi < 0) {
+                        if (run0 >= 0) r.allCut.rect(run0 * cell - .5, row * cell - .5, (col - run0) * cell + 1, cell + 1);
+                        run0 = -1;
+                        flush(col);
+                        continue;
+                    }
+                    if (run0 < 0) run0 = col;
+                    const p = parts[pi], ab = Math.random() < .5 ? 1 : 0;
+                    if (p !== segP || ab !== segAB) {
+                        flush(col);
+                        segP = p;
+                        segAB = ab;
+                        seg0 = col;
+                    }
+                    list.push([col, row, p.alpha]);
+                }
             }
-            fillCells(prepare(lay, W, H, DPR, 800, .88), list);
+            fillCells(prepare(lay, W, H, FDPR), list, FDPR, 800, .88);
         }
 
         function begin(r) {
@@ -851,6 +935,8 @@
             }
             r.t0 = performance.now();
             r.raf = requestAnimationFrame(frame);
+            // 覆い終わってから見えるようになるまで、背景は隠れているので描かない
+            setTimeout(() => { if (run === r && !r.revealed) field.pause(true); }, c.cover * 1000);
         }
 
         const drawNoise = (r, dx = 0) => {
@@ -904,9 +990,12 @@
             const r = run;
             if (!r || r.aborted) return;
             const c = r.cfg, t = (now - r.t0) / 1000;
+            // 画面を替えるコマと、次の画面を測って文字の層を描くコマは分ける(1 コマに重い処理が重ならないように)。
+            // 形が見えはじめる(resolve)のはまだ先なので、1 コマ遅れても見た目は変わらない
             if (!r.swapped && t >= c.swap) {
                 r.swapped = true;
                 r.swap && r.swap();
+            } else if (r.swapped && !r.measured) {
                 measure(r);
             }
 
@@ -914,7 +1003,7 @@
             ctx.globalAlpha = 1;
             ctx.globalCompositeOperation = 'source-over';
             ctx.clearRect(0, 0, cvs.width, cvs.height);
-            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            ctx.setTransform(FDPR, 0, 0, FDPR, 0, 0);
 
             // ピリピリ: 層・位置・濃さを数十ミリ秒ごとに切り替える。導入は時間とともに激しくなる
             const heat = r.mode !== 'move' ? clamp(t / c.resolve, 0, 1) ** 1.2 : .8;
@@ -959,18 +1048,6 @@
                 ctx.fill(r.allCut);
             }
 
-            // 導入の山場: 白黒が反転した画面が数回はさまる(いまは使っていない。climax を空にしてある)
-            for (const ct of c.climax) {
-                if (t < ct || t >= ct + .045) continue;
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = '#111';
-                ctx.fillRect(0, 0, W, H);
-                ctx.globalCompositeOperation = 'destination-out';
-                drawNoise(r);
-                drawNoise(r);
-                ctx.globalCompositeOperation = 'source-over';
-            }
-
             // 導入の途中で、できあがる画面の形が一瞬だけ見える
             if (r.measured) {
                 for (const f of c.flashes) {
@@ -1007,6 +1084,7 @@
             if (r.measured && t >= c.reveal) {
                 if (!r.revealed) {
                     r.revealed = true;
+                    field.pause(false);
                     wrap.classList.add('is-fading');
                     r.onReveal(r.parts, false);
                 }
@@ -1024,8 +1102,13 @@
             else r.raf = requestAnimationFrame(frame);
         }
 
+        // 画面の幅かマスの大きさが変わったときだけ打ち切る(スマホのツールバーの出入りで高さだけ変わるのは、そのまま続ける)
+        let sizeAt = '';
+        const sizeKey = () => `${innerWidth}|${cellSize()}`;
+        const onResize = () => { if (sizeKey() !== sizeAt) abort(); };
+
         function detach() {
-            removeEventListener('resize', abort);
+            removeEventListener('resize', onResize);
             removeEventListener('keydown', abort);
             removeEventListener('wheel', abort);
             wrap.removeEventListener('pointerdown', abort);
@@ -1036,6 +1119,7 @@
             if (!r) return;
             cancelAnimationFrame(r.raf);
             run = null;
+            field.pause(false);
             detach();
             wrap.classList.remove('is-on', 'is-fading', 'is-skipped', 'is-move');
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1056,6 +1140,7 @@
             }
             if (!r.revealed) {
                 r.revealed = true;
+                field.pause(false);
                 if (!r.measured) assignDelays(r, partsOf(r.containers));
                 r.onReveal(r.parts, true);
             }
@@ -1074,17 +1159,18 @@
                 wrap.classList.remove('is-fading', 'is-skipped');
                 wrap.classList.add('is-on');
                 wrap.classList.toggle('is-move', opts.mode === 'move');
-                addEventListener('resize', abort);
+                sizeAt = sizeKey();
+                addEventListener('resize', onResize);
                 if (opts.mode !== 'move') {
                     addEventListener('keydown', abort);
                     addEventListener('wheel', abort, { passive: true });
                     wrap.addEventListener('pointerdown', abort);
-                    // canvas に描く文字は Web フォントを待ってから(最大 0.9 秒)
-                    const wait = document.fonts ? Promise.all([
+                    // canvas に描く文字は Web フォントを待ってから(CSS が届くのも含めて、最大 1.2 秒)
+                    const wait = document.fonts ? fontsCss.then(() => Promise.all([
                         document.fonts.load('700 100px "Inter Tight"', 'WS'),
                         document.fonts.load(`${MARK_WEIGHT} 100px "Unbounded"`, 'WSORK.'),
-                    ]).catch(() => {}) : null;
-                    Promise.race([wait, new Promise((res) => setTimeout(res, 900))]).then(() => begin(r));
+                    ])).catch(() => {}) : null;
+                    Promise.race([wait, new Promise((res) => setTimeout(res, 1200))]).then(() => begin(r));
                 } else {
                     begin(r);
                 }
@@ -1145,7 +1231,8 @@
         header.classList.remove('is-scrolled');
         tv.toggle(s.id === 'top');
         page.enter(s);
-        field.quiet();
+        requiet(); // 背景の静かにする所は、次のコマで測る(画面を替えたコマに重ねない)
+        field.wake();
     }
 
     /* 各画面の飾り: 頭の小さな画面の 3D の絵、準備中のアカウントの砂嵐、端末に 1 行ずつ出す */
@@ -1168,6 +1255,14 @@
                 stops = [];
                 clearInterval(snowTimer);
                 $$('canvas[data-emblem]', s.el).forEach((c) => stops.push(tv.mini3d.mount(c, c.dataset.emblem)));
+                // 準備中のアカウント(.acct.is-soon)の画面には、砂嵐を入れる
+                $$('.acct.is-soon .acct-screen', s.el).forEach((sc) => {
+                    if ($('.acct-snow', sc)) return;
+                    const f = document.createElement('span');
+                    f.className = 'acct-snow';
+                    f.setAttribute('aria-hidden', 'true');
+                    sc.append(f);
+                });
                 const flakes = $$('.acct-snow', s.el);
                 flakes.forEach(snow);
                 if (flakes.length && !RM) snowTimer = setInterval(() => { if (!document.hidden) flakes.forEach(snow); }, 110);
@@ -1195,7 +1290,7 @@
         ...$$('.dock-btn:not([hidden])', dock),
         ...(cur ? $$('[data-quiet]', cur.el) : []),
     ]);
-    let quietRaf = 0;
+    let quietRaf = 0, placeRaf = 0;
     const requiet = () => {
         if (quietRaf) return;
         quietRaf = requestAnimationFrame(() => {
@@ -1203,13 +1298,20 @@
             field.quiet();
         });
     };
-    addEventListener('scroll', requiet, { passive: true });
+    // スクロールでは測り直さず、とっておいた四角をずらすだけ
+    addEventListener('scroll', () => {
+        if (placeRaf || quietRaf) return;
+        placeRaf = requestAnimationFrame(() => {
+            placeRaf = 0;
+            field.place();
+        });
+    }, { passive: true });
     if ('ResizeObserver' in window) {
         const ro = new ResizeObserver(requiet);
         screens.forEach((o) => ro.observe(o.el));
         ro.observe(header);
     }
-    if (document.fonts) document.fonts.ready.then(requiet);
+    fontsReady.then(requiet);
 
     // origin: 円が広がり始める点(押したボタンなど)。dir: 横へ流すとき(前後のプロダクト)
     // before: 次の画面に替わる直前にすること
@@ -1295,7 +1397,6 @@
         };
         requestAnimationFrame(step);
     });
-    const easeIO = (t) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
     const ramp = (a, b, x) => clamp((x - a) / (b - a), 0, 1);
     // 板と本物の入れ替わり: [時刻, 板の濃さ]。段で行き来しながら本物へ
     const SWAP = [[0, 1], [.66, .15], [.7, .85], [.75, .1], [.8, .6], [.85, 0], [.88, .35], [.92, 0]];
@@ -1316,22 +1417,26 @@
         c.setAttribute('aria-hidden', 'true');
         document.body.appendChild(c);
         const g = c.getContext('2d');
-        let until = 0, raf = 0, last = 0, area = null;
+        const GDPR = Math.min(DPR, 1.5); // 粗い帯なので、画素密度は 1.5 まで
+        let until = 0, raf = 0, last = 0, area = null, freeTimer = 0;
+        c.width = c.height = 0;
         const frame = (now) => {
             if (now >= until) {
                 g.clearRect(0, 0, c.width, c.height);
                 raf = 0;
+                // しばらく使わなければ、画面いっぱいの canvas を放す(続けて走るときは使い回す)
+                freeTimer = setTimeout(() => { c.width = c.height = 0; }, 2000);
                 return;
             }
             raf = requestAnimationFrame(frame);
             if (now - last < 45) return; // 1 秒に 20 コマほど。カクカクと切り替わる
             last = now;
             const W = innerWidth, H = innerHeight;
-            if (c.width !== Math.round(W * DPR) || c.height !== Math.round(H * DPR)) {
-                c.width = Math.round(W * DPR);
-                c.height = Math.round(H * DPR);
+            if (c.width !== Math.round(W * GDPR) || c.height !== Math.round(H * GDPR)) {
+                c.width = Math.round(W * GDPR);
+                c.height = Math.round(H * GDPR);
             }
-            g.setTransform(DPR, 0, 0, DPR, 0, 0);
+            g.setTransform(GDPR, 0, 0, GDPR, 0, 0);
             g.clearRect(0, 0, W, H);
             const cell = cellSize(), a = area || { left: 0, top: 0, width: W, height: H };
             g.font = `600 ${cell * .8}px ${FONT}`;
@@ -1363,6 +1468,7 @@
                 const now = performance.now();
                 area = rect;
                 until = Math.max(until, now + ms);
+                clearTimeout(freeTimer);
                 if (!raf) {
                     last = 0;
                     raf = requestAnimationFrame(frame);
@@ -1402,7 +1508,12 @@
         // ページが替わった瞬間(引っかかりやすい所)は、グリッチでごまかす
         glitch.burst(300);
         tear(z);
-        setTimeout(() => playIn(parts, containers, false), 160);
+        // つなぐ部分に data-part をもどすのは、ちらつきの印(is-revealing)が外れてから(先にもどすと、もう一度ちらつく)
+        let revealEnd = Infinity;
+        setTimeout(() => {
+            const max = playIn(parts, containers, false);
+            revealEnd = performance.now() + (max + .8) * 1000;
+        }, 160);
         setTimeout(() => page.type(next), DUR * MOVE - 120);
         let swapped = false;
         // 幕(スマホで上下の余りを埋めていた色)は、板が縮み始めると引いて、組み上がるページを見せる
@@ -1411,7 +1522,7 @@
             bd.animate([{ opacity: 1 }, { opacity: 0 }], { duration: DUR * .35, easing: 'ease-out', fill: 'forwards' }).finished.then(() => bd.remove());
         }
         tween(DUR, (p) => {
-            plateAt(z, at, to, easeIO(Math.min(1, p / MOVE)));
+            plateAt(z, at, to, inOutCubic(Math.min(1, p / MOVE)));
             // 入れ替わり: なめらかに薄めず、段で行き来させる(テレビの信号が乱れて切り替わる感じ)
             const k = target ? SWAP.filter(([t]) => p >= t).pop()[1] : 1 - p;
             z.style.opacity = k;
@@ -1424,7 +1535,7 @@
         }).then(() => {
             z.remove();
             held.forEach((el) => { el.style.opacity = ''; });
-            release();
+            setTimeout(release, Math.max(0, revealEnd - performance.now()) + 50);
             busy = false;
             field.quiet();
             const want = wanted();
@@ -1439,10 +1550,18 @@
     function pullOut(top) {
         const from = cur, n = tv.channelOf(from), W = innerWidth, H = innerHeight;
         busy = true;
-        const els = [from.el, dock];
+        // スマホの幅では .dock 自体が固定の帯。パソコンの幅では中のボタンがそれぞれ固定なので、ボタンに当てる
+        // (.dock に transform を当てると、中の fixed のボタンの基準が .dock に変わって飛んでしまう)
+        const dockEls = getComputedStyle(dock).position === 'fixed' ? [dock] : $$('.dock-btn:not([hidden])', dock);
+        const els = [from.el, ...dockEls];
+        // 前後のボタンはもともと translateY(-50%) でずらしてあるので、揺れの後ろにそのずれを足す
+        const base = new Map(els.map((el) => {
+            const t = getComputedStyle(el).transform;
+            return [el, t && t !== 'none' ? t : ''];
+        }));
         els.forEach((el) => {
-            const r = el.getBoundingClientRect();
-            el.style.transformOrigin = `${W / 2 - r.left}px ${H / 2 - r.top}px`;
+            const r = el.getBoundingClientRect(), m = base.get(el) ? new DOMMatrix(base.get(el)) : null;
+            el.style.transformOrigin = `${W / 2 - (r.left - (m ? m.e : 0))}px ${H / 2 - (r.top - (m ? m.f : 0))}px`;
         });
         glitch.burst(420);
         const EJECT = 380, SHAKE = .55;
@@ -1461,7 +1580,7 @@
             // 揺れのあいだは横に裂ける(上下に分かれて別々にずれる)
             const cut = p < SHAKE ? `inset(${(Math.random() * 30).toFixed(0)}% 0 ${(Math.random() * 30).toFixed(0)}% 0)` : '';
             els.forEach((el) => {
-                el.style.transform = tf;
+                el.style.transform = `${tf} ${base.get(el)}`;
                 el.style.clipPath = Math.random() < .35 ? cut : '';
                 el.style.filter = q > 0 ? `brightness(${(1 + 1.4 * q).toFixed(2)})` : '';
                 el.style.opacity = p < SHAKE ? (Math.random() < .2 ? .55 : 1) : 1 - ramp(.85, 1, q);
@@ -1590,18 +1709,11 @@
         });
         $('.tv-grille span').textContent = 'WSWS'.repeat(160);
 
-        // 右の小さな画面の絵(ASCII アート)。行き先の画面の id ごとに、コマを並べる。
-        // コマが 2 つ以上あると順にくり返す。絵のないチャンネルは番号を、番組のない番号は砂嵐を映す。
-        // プロダクト(works)・ボット(bots)・経歴(about)・SNS(sns)は、細かい文字で 3D の絵を描く(下の mini3d)
-        const MINI_ART = {};
-        const artOf = (src) => {
-            const lines = src.replace(/^\n/, '').split('\n');
-            const w = Math.max(...lines.map((l) => l.length));
-            return lines.map((l) => l.padEnd(w));
-        };
+        // 右の小さな画面の絵。行き先の画面の id ごとに、細かい文字で 3D の絵を描く(下の mini3d の SCENES)。
+        // 絵のないチャンネルは番号を、番組のない番号は砂嵐を映す
         const miniBox = $('.tv-mini'), miniArt = $('.tv-mini-art');
-        let miniRaf = 0, miniTimer = 0;
-        const miniStop = () => { cancelAnimationFrame(miniRaf); clearInterval(miniTimer); mini3d.stop(); };
+        let miniTimer = 0;
+        const miniStop = () => { clearInterval(miniTimer); mini3d.stop(); };
         const wsNoise = () => Array.from({ length: 7 }, () => Array.from({ length: 13 }, () => {
             const r = Math.random();
             return r < .3 ? 'W' : r < .6 ? 'S' : ' ';
@@ -1624,6 +1736,9 @@
             const g = cvs.getContext('2d');
             const cells = new Float32Array(COLS * ROWS * 2); // マスごとの明るさと、辺の強さ
             const lum = (dot) => .12 + .88 * Math.max(0, dot);
+            // 長さ。Math.hypot は遅いので、光線を進める内側のループではこちらを使う
+            const len2 = (x, y) => Math.sqrt(x * x + y * y);
+            const len3 = (x, y, z) => Math.sqrt(x * x + y * y + z * z);
             // 傾き a(上面が見える向き)× 縦軸の回転 b。形の側から見た視点と光の向きも返す
             const view = (a, b) => {
                 const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
@@ -1657,7 +1772,7 @@
                         let hit = 0, sum = 0, lit = 0, nx = 0, ny = 0, nz = 0, cm = -1;
                         for (let s = 0; s < 4; s++) {
                             ray(R, HALF, c, r, s, d);
-                            const dl = Math.hypot(d[0], d[1], d[2]), dx = d[0] / dl, dy = d[1] / dl, dz = d[2] / dl;
+                            const dl = len3(d[0], d[1], d[2]), dx = d[0] / dl, dy = d[1] / dl, dz = d[2] / dl;
                             const bb = ox * dx + oy * dy + oz * dz, h = bb * bb - (ox * ox + oy * oy + oz * oz - br * br);
                             if (h < 0) continue;
                             let tt = -bb - Math.sqrt(h), on = false;
@@ -1673,7 +1788,7 @@
                             sd(px, py, pz); // 当たった部品を sc.m に
                             const m = sc.m;
                             let qx = a1 - a2 - a3 + a4, qy = -a1 - a2 + a3 + a4, qz = -a1 + a2 - a3 + a4;
-                            const ql = Math.hypot(qx, qy, qz) || 1;
+                            const ql = len3(qx, qy, qz) || 1;
                             qx /= ql; qy /= ql; qz /= ql;
                             let v = lum(qx * L[0] + qy * L[1] + qz * L[2]) * FACE;
                             if (sc.paint) v = sc.paint(m, v, px, py, pz); // 模様やきらめき
@@ -1687,7 +1802,7 @@
                         cells[ci * 2] = sc.lit[cm] ? lit : (sum / hit) * (.45 + .55 * (hit / 4));
                         mats[ci] = cm;
                         covs[ci] = hit / 4;
-                        const nl = Math.hypot(nx, ny, nz) || 1;
+                        const nl = len3(nx, ny, nz) || 1;
                         nrm[ci * 3] = nx / nl; nrm[ci * 3 + 1] = ny / nl; nrm[ci * 3 + 2] = nz / nl;
                     }
                 }
@@ -1723,7 +1838,7 @@
             const rod = (x, y, z, ax, ay, az, bx, by, bz, r) => {
                 const px = x - ax, py = y - ay, pz = z - az, vx = bx - ax, vy = by - ay, vz = bz - az;
                 const k = Math.min(Math.max((px * vx + py * vy + pz * vz) / (vx * vx + vy * vy + vz * vz), 0), 1);
-                return Math.hypot(px - vx * k, py - vy * k, pz - vz * k) - r;
+                return len3(px - vx * k, py - vy * k, pz - vz * k) - r;
             };
 
             /* ボット: 角の丸いロボットの頭。耳とアンテナがあり、目と口は光る。
@@ -1752,7 +1867,7 @@
                         const hy = y - CY, ax = Math.abs(x);
                         let dist = box(x, hy, z, .7, .42, .46, .3), m = HEAD; // 頭: 幅 2、高さ 1.44、奥行き 1.52。角は大きく丸める
                         const ea = Math.sqrt(hy * hy + z * z) - .14, eb = Math.abs(ax - 1.02) - .05; // 耳: 左右の小さな円柱
-                        const ear = Math.min(Math.max(ea, eb), 0) + Math.hypot(Math.max(ea, 0), Math.max(eb, 0)) - .04;
+                        const ear = Math.min(Math.max(ea, eb), 0) + len2(Math.max(ea, 0), Math.max(eb, 0)) - .04;
                         if (ear < dist) { dist = ear; m = EAR; }
                         const sy = Math.min(Math.max(hy, .7), 1.18); // アンテナの棒
                         const stem = Math.sqrt(x * x + (hy - sy) ** 2 + z * z) - .045;
@@ -1783,7 +1898,7 @@
                                 for (let c = 0; c < COLS; c++) {
                                     const ci = r * COLS + c;
                                     if (mt[ci] >= 0) continue;
-                                    const dx = (c + .5 - bc) * cw, dy = (br - r - .5) * chh, dd = Math.hypot(dx, dy);
+                                    const dx = (c + .5 - bc) * cw, dy = (br - r - .5) * chh, dd = len2(dx, dy);
                                     if (dy < dd * .35 || Math.abs(dd - rad) > chh * .45) continue; // 上向きの扇の形だけ
                                     cells[ci * 2] = Math.max(cells[ci * 2], .45 + .45 * fade);
                                 }
@@ -1823,14 +1938,14 @@
                         // 帽子の側の座標へ: 持ち上げたぶんを戻し、前への回転を戻す
                         const qy = y - CY - hop, py = cf * qy + sf * z, pz = -sf * qy + cf * z, px = x;
                         let dist = box(px, py, pz, .84, .004, .84, .04), m = BOARD; // 板: 一辺 1.76、厚み 0.09
-                        const cr = Math.hypot(px, pz) - .5 - (py + .02) * -.08, ch = Math.abs(py + .36) - .3; // 頭にかぶる部分: 下へ少し広がる円柱
-                        const crown = Math.min(Math.max(cr, ch), 0) + Math.hypot(Math.max(cr, 0), Math.max(ch, 0)) - .04;
+                        const cr = len2(px, pz) - .5 - (py + .02) * -.08, ch = Math.abs(py + .36) - .3; // 頭にかぶる部分: 下へ少し広がる円柱
+                        const crown = Math.min(Math.max(cr, ch), 0) + len2(Math.max(cr, 0), Math.max(ch, 0)) - .04;
                         if (crown < dist) { dist = crown; m = CROWN; }
                         // 房のひも: ボタンから板の上を手前右の縁へ走り、縁から垂れる
                         const ex = .88, ey = .05, hx = ex + tx * .4, hy = ey + ty * .4, hz = tz * .4;
                         const cord = Math.min(rod(px, py, pz, 0, .07, 0, ex, ey, 0, .035), rod(px, py, pz, ex, ey, 0, hx, hy, hz, .035));
                         if (cord < dist) { dist = cord; m = CORD; }
-                        const button = Math.hypot(px, py - .08, pz) - .075;
+                        const button = len3(px, py - .08, pz) - .075;
                         if (button < dist) { dist = button; m = BUTTON; }
                         const tassel = rod(px, py, pz, hx, hy, hz, hx + tx * .3, hy + ty * .3, hz + tz * .3, .09);
                         if (tassel < dist) { dist = tassel; m = TASSEL; }
@@ -1846,27 +1961,31 @@
                文字なので輪郭の線は引かず、正面を明るく、厚みの側面を暗くして形を出す */
             const atMark = (() => {
                 const TH = .08, DEPTH = .085; // 線の太さの半分と、厚みの半分(太いと a の穴や弧の切れ目がつぶれる)
-                // 円弧の距離(中心 cx, cy、半径 r、角度 a0 から a1 まで反時計回り、端は丸い)
-                const arc = (x, y, cx, cy, r, a0, a1) => {
-                    const px = x - cx, py = y - cy;
-                    let a = Math.atan2(py, px);
-                    while (a < a0) a += Math.PI * 2;
-                    if (a <= a1) return Math.abs(Math.hypot(px, py) - r);
-                    return Math.min(Math.hypot(px - r * Math.cos(a0), py - r * Math.sin(a0)), Math.hypot(px - r * Math.cos(a1), py - r * Math.sin(a1)));
+                // 円弧の距離(中心 cx, cy、半径 r、角度 a0 から a1 まで反時計回り、端は丸い)。端の点は先に求めておく
+                const arc = (cx, cy, r, a0, a1) => {
+                    const x0 = r * Math.cos(a0), y0 = r * Math.sin(a0), x1 = r * Math.cos(a1), y1 = r * Math.sin(a1);
+                    return (x, y) => {
+                        const px = x - cx, py = y - cy;
+                        let a = Math.atan2(py, px);
+                        while (a < a0) a += Math.PI * 2;
+                        if (a <= a1) return Math.abs(len2(px, py) - r);
+                        return Math.min(len2(px - x0, py - y0), len2(px - x1, py - y1));
+                    };
                 };
+                const hook = arc(.52, -.1, .22, Math.PI, Math.PI * 2), ring = arc(0, 0, .76, .066, Math.PI * 2 - 1.15);
                 const seg = (x, y, ax, ay, bx, by) => {
                     const px = x - ax, py = y - ay, vx = bx - ax, vy = by - ay;
                     const k = Math.min(Math.max((px * vx + py * vy) / (vx * vx + vy * vy), 0), 1);
-                    return Math.hypot(px - vx * k, py - vy * k);
+                    return len2(px - vx * k, py - vy * k);
                 };
                 // @ の平面の形: 内側の a(輪と右の縦線)、縦線の下から右へ回り込むかぎ、外側の大きな弧。
                 // 弧は右下で終わり、かぎとの間をはっきり空ける(詰まると二重丸に見える)
                 const glyph = (x, y) => Math.min(
-                    Math.abs(Math.hypot(x + .06, y) - .29),
+                    Math.abs(len2(x + .06, y) - .29),
                     seg(x, y, .3, .3, .3, -.1),
-                    arc(x, y, .52, -.1, .22, Math.PI, Math.PI * 2),
+                    hook(x, y),
                     seg(x, y, .74, -.1, .76, .05),
-                    arc(x, y, 0, 0, .76, .066, Math.PI * 2 - 1.15),
+                    ring(x, y),
                 ) - TH;
                 let spin = 0;
                 const sc = {
@@ -1879,7 +1998,7 @@
                     sd(x, y, z) {
                         const d2 = glyph(x, y) + .025, dz = Math.abs(z) - DEPTH + .025;
                         sc.m = 0;
-                        return Math.min(Math.max(d2, dz), 0) + Math.hypot(Math.max(d2, 0), Math.max(dz, 0)) - .025;
+                        return Math.min(Math.max(d2, dz), 0) + len2(Math.max(d2, 0), Math.max(dz, 0)) - .025;
                     },
                     glow: () => 1,
                     // 正面(と裏)は明るく、厚みの側面は光の当たり方のまま。輪郭の線の代わりに明暗で形を出す
@@ -1982,6 +2101,27 @@
 
             const SCENES = { works: printer, bots: bot, about: cap, sns: atMark };
 
+            // 文字の見本帳: RAMP の文字を白で 1 枚に描いておき、マスごとに濃さ(globalAlpha)を付けて写す。
+            // fillText を 1000 回近く呼ぶより、ずっと軽い。描く先の大きさが変わったら作り直す
+            const GLYPHS = RAMP; // W と S のノイズも、この中の W と S を使う
+            function atlasOf(tg, px) {
+                if (tg.atlas && tg.atlasPx === px) return tg.atlas;
+                const chh = px / ROWS, fs = chh * 1.02;
+                const bw = Math.ceil(chh * 1.3), bh = Math.ceil(chh * 1.5); // 1 文字の枠(はみ出しても切れないよう広め)
+                const c = document.createElement('canvas');
+                c.width = bw * GLYPHS.length;
+                c.height = bh;
+                const ag = c.getContext('2d');
+                ag.font = `600 ${fs.toFixed(2)}px ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace`;
+                ag.textAlign = 'center';
+                ag.textBaseline = 'middle';
+                ag.fillStyle = 'rgb(236, 236, 236)';
+                for (let i = 0; i < GLYPHS.length; i++) ag.fillText(GLYPHS[i], (i + .5) * bw, bh / 2);
+                tg.atlas = { c, bw, bh, W: GLYPHS.indexOf('W'), S: GLYPHS.indexOf('S') };
+                tg.atlasPx = px;
+                return tg.atlas;
+            }
+
             // 描く。due があれば、その時刻までのマスは W と S のノイズのまま(明るさが負のマスも同じノイズ)。
             // 描く先(tg)は、テレビの小さな画面か、各画面の頭の小さな画面
             function draw(tg, scene, t, due) {
@@ -1991,46 +2131,43 @@
                 const px = Math.round(S * DPR);
                 if (cvs.width !== px) cvs.width = cvs.height = px;
                 const cw = px / COLS, chh = px / ROWS;
+                const A = atlasOf(tg, px), ox = A.bw / 2, oy = A.bh / 2;
+                const put = (k, a, c, r) => {
+                    g.globalAlpha = a;
+                    g.drawImage(A.c, k * A.bw, 0, A.bw, A.bh, Math.round((c + .5) * cw - ox), Math.round((r + .5) * chh - oy), A.bw, A.bh);
+                };
+                g.globalAlpha = 1;
                 g.clearRect(0, 0, px, px);
-                g.font = `600 ${(chh * 1.02).toFixed(2)}px ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace`;
-                g.textAlign = 'center';
-                g.textBaseline = 'middle';
                 cells.fill(0);
                 scene.shade(t);
                 for (let r = 0; r < ROWS; r++) {
                     for (let c = 0; c < COLS; c++) {
-                        const i = r * COLS + c, x = (c + .5) * cw, y = (r + .5) * chh;
-                        if (due && t < due[i]) {
-                            if (Math.random() < .45) continue;
-                            g.fillStyle = 'rgba(236, 236, 236, .55)';
-                            g.fillText(Math.random() < .5 ? 'W' : 'S', x, y);
-                            continue;
-                        }
+                        const i = r * COLS + c;
                         let v = cells[i * 2];
-                        if (!v) continue;
-                        if (v < 0) { // 形が崩れている所
-                            if (Math.random() < .45) continue;
-                            g.fillStyle = 'rgba(236, 236, 236, .55)';
-                            g.fillText(Math.random() < .5 ? 'W' : 'S', x, y);
+                        // まだ形になっていない所と、形が崩れている所は W と S のノイズ
+                        if ((due && t < due[i]) || v < 0) {
+                            if (Math.random() >= .45) put(Math.random() < .5 ? A.W : A.S, .55, c, r);
                             continue;
                         }
+                        if (!v) continue;
                         if (cells[i * 2 + 1] >= .25) v = .86 + .14 * cells[i * 2 + 1]; // 辺は S と W の明るい線
-                        g.fillStyle = `rgba(236, 236, 236, ${(.3 + .7 * v).toFixed(3)})`;
-                        g.fillText(RAMP[Math.min(RAMP.length - 1, Math.round(v * (RAMP.length - 1)))], x, y);
+                        put(Math.min(RAMP.length - 1, Math.round(v * (RAMP.length - 1))), .3 + .7 * v, c, r);
                     }
                 }
+                g.globalAlpha = 1;
             }
 
-            // 動かし始めて、止める関数を返す
+            // 動かし始めて、止める関数を返す。画面の外へスクロールして見えない間は描かない
             function run(tg, id) {
                 const scene = SCENES[id];
                 if (RM) {
                     draw(tg, scene, scene.t0);
                     return () => {};
                 }
-                const t0 = performance.now(), due = Array.from({ length: COLS * ROWS }, () => scene.t0 + 40 + Math.random() * 300);
-                let last = -99, raf = 0;
+                const t0 = performance.now(), due = new Float32Array(COLS * ROWS).map(() => scene.t0 + 40 + Math.random() * 300);
+                let last = -99, raf = 0, seen = true, stopped = false;
                 const step = (now) => {
+                    if (!seen) { raf = 0; return; }
                     raf = requestAnimationFrame(step);
                     if (document.hidden) return;
                     const t = now - t0;
@@ -2038,8 +2175,18 @@
                     last = t;
                     draw(tg, scene, t + scene.t0, t < 400 ? due : null);
                 };
+                const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => {
+                    seen = es[es.length - 1].isIntersecting;
+                    if (seen && !raf && !stopped) raf = requestAnimationFrame(step);
+                }) : null;
+                if (io) io.observe(tg.cvs);
                 raf = requestAnimationFrame(step);
-                return () => cancelAnimationFrame(raf);
+                return () => {
+                    stopped = true;
+                    cancelAnimationFrame(raf);
+                    raf = 0;
+                    if (io) io.disconnect();
+                };
             }
 
             const tvTarget = { cvs, g };
@@ -2076,40 +2223,7 @@
                 mini3d.start(c.id);
                 return;
             }
-            const frames = (MINI_ART[c.id] || [`
-.-------.
-|  CH   |
-|   ${String(c.n).padEnd(4)}|
-'-------'`]).map(artOf);
-            const loop = () => {
-                if (frames.length < 2 || RM) return;
-                let f = 0;
-                miniTimer = setInterval(() => {
-                    f = (f + 1) % frames.length;
-                    miniArt.textContent = frames[f].join('\n');
-                }, 700);
-            };
-            if (RM) {
-                miniArt.textContent = frames[0].join('\n');
-                return;
-            }
-            const due = frames[0].map((l) => [...l].map(() => 40 + Math.random() * 300));
-            const t0 = performance.now();
-            let last = -99;
-            const step = (now) => {
-                const t = now - t0;
-                if (t - last < 40) { miniRaf = requestAnimationFrame(step); return; } // パラパラと、少しずつ
-                last = t;
-                let left = false;
-                miniArt.textContent = frames[0].map((l, r) => [...l].map((ch, i) => {
-                    if (t >= due[r][i]) return ch;
-                    left = true;
-                    return Math.random() < .5 ? 'W' : 'S';
-                }).join('')).join('\n');
-                if (left) miniRaf = requestAnimationFrame(step);
-                else loop();
-            };
-            miniRaf = requestAnimationFrame(step);
+            miniArt.textContent = `.-------.\n|  CH   |\n|   ${String(c.n).padEnd(4)}|\n'-------'`;
         }
 
         // 砂嵐: 黒地に白い W と S。3 枚を描いておいて切り替え、チャンネルを替えた瞬間だけ強く出す
@@ -2498,7 +2612,7 @@
             fitMark();
         }).observe(sample);
     }
-    if (document.fonts) document.fonts.ready.then(fitMark);
+    fontsReady.then(fitMark);
 
     /* ----------------------------------------------------------------------
        作品: ギャラリーとバージョンの切り替え
@@ -2528,6 +2642,7 @@
                 // 読み込んでから差し替える。古い画像を背景に残して、新しい画像をちらつかせて重ねる
                 const next = new Image();
                 next.onload = next.onerror = () => {
+                    if (!btn.classList.contains('is-active')) return; // 読み込む間に、別のサムネが押された
                     media.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
                     img.src = btn.dataset.src;
                     img.alt = btn.dataset.alt;
@@ -2549,6 +2664,7 @@
     const travel = (media, label, back) => {
         $$('.gen-snow, .gen-osd', media).forEach((el) => el.remove());
         clearInterval(media._snow);
+        clearTimeout(media._snowEnd); // 前の切り替えの「砂嵐を引く」合図が、新しい砂嵐を早く止めないように
         clearTimeout(media._osd);
         const osd = document.createElement('span');
         osd.className = 'gen-osd';
@@ -2565,8 +2681,14 @@
         snow.className = `gen-snow${back ? ' is-back' : ''}`;
         snow.setAttribute('aria-hidden', 'true');
         media.append(snow);
+        // 1 文字の幅は書体で変わるので、実際に測ってから数を決める(足りないと右端が切れる)
+        const probe = document.createElement('span');
+        probe.textContent = 'W'.repeat(40);
+        snow.append(probe);
+        const cw = (probe.getBoundingClientRect().width / 40) || 4.5;
+        probe.remove();
         const r = media.getBoundingClientRect();
-        const cols = Math.ceil(r.width / 5) + 2, rows = Math.ceil(r.height / 8) + 2;
+        const cols = Math.ceil(r.width / cw) + 4, rows = Math.ceil(r.height / 8) + 2;
         const fill = () => {
             let t = '';
             for (let y = 0; y < rows; y++) {
@@ -2580,7 +2702,7 @@
         };
         fill();
         media._snow = setInterval(fill, 50);
-        setTimeout(() => {
+        media._snowEnd = setTimeout(() => {
             clearInterval(media._snow);
             snow.classList.add('is-out');
             setTimeout(() => snow.remove(), 200);
@@ -2677,7 +2799,7 @@
                 const t = (a[0] || '').replace(/\/$/, '');
                 if (t === 'works') return worksLs();
                 if (t === 'skills') return pre('backend/  database/  frontend/  infra/  nlp/');
-                if (t && !FILES[t] && t !== 'research.txt') return pre(`ls: '${t}' にアクセスできない: そのようなファイルやディレクトリはない`);
+                if (t && !Object.hasOwn(FILES, t) && t !== 'research.txt') return pre(`ls: '${t}' にアクセスできない: そのようなファイルやディレクトリはない`);
                 put('career.txt  now.txt  research.txt  <b class="tl-dir">skills/</b>  <b class="tl-dir">works/</b>', 'tl-out tl-pre');
             },
             cat(a) {
@@ -2688,13 +2810,13 @@
                     return put('テーマ: <span class="redact" style="--w:9em"><span class="sr-only">非公開</span><span aria-hidden="true">WSWSWSWSWSWS</span></span>');
                 }
                 if (/^(works|skills)\/?$/.test(f)) return pre(`cat: ${f}: ディレクトリだ`);
-                pre(FILES[f] || `cat: ${f}: そのようなファイルはない`);
+                pre(Object.hasOwn(FILES, f) ? FILES[f] : `cat: ${f}: そのようなファイルはない`);
             },
             cd(a) {
                 const t = (a[0] || '').replace(/^(\.\/)?(works\/)?/, '').replace(/\/$/, '');
                 if (!t || t === '~' || t === '.') return;
                 if (t === '..' || t === '/') return CMDS.exit();
-                if (WORKS[t]) return go(WORKS[t], { origin: centerOf(line) });
+                if (Object.hasOwn(WORKS, t)) return go(WORKS[t], { origin: centerOf(line) });
                 if (t === 'works' || t === 'skills') return pre(`cd: 中身は ls ${t} で見られる`);
                 pre(`cd: ${t}: そのようなディレクトリはない`);
             },
@@ -2794,7 +2916,7 @@
             if (cmd) {
                 hist.push(cmd);
                 const [name, ...args] = cmd.split(/\s+/);
-                const f = Object.prototype.hasOwnProperty.call(CMDS, name) ? CMDS[name] : null;
+                const f = Object.hasOwn(CMDS, name) ? CMDS[name] : null;
                 if (f) f(args);
                 else pre(`${name}: コマンドが見つからない`);
             }
@@ -2872,7 +2994,7 @@
         const tick = () => {
             if (document.hidden) return;
             const jst = new Date(Date.now() + 9 * 3600e3); // UTC の関数で読むと日本時間になる
-            const h = jst.getUTCHours(), rest = 3600 - jst.getUTCMinutes() * 60 - jst.getUTCSeconds();
+            const h = jst.getUTCHours(), rest = (3600 - jst.getUTCMinutes() * 60 - jst.getUTCSeconds()) % 3600; // ちょうど 0 分は 00:00
             left.textContent = `${String(Math.floor(rest / 60)).padStart(2, '0')}:${String(rest % 60).padStart(2, '0')}`;
             cells.forEach((c, i) => {
                 c.classList.toggle('is-done', i <= h);
@@ -2883,9 +3005,6 @@
         tick();
     })();
 
-    /* ----------------------------------------------------------------------
-       ボット: Bluesky の公開 API から最新の投稿を読む。読めなければ投稿の例のまま
-       ---------------------------------------------------------------------- */
     /* ----------------------------------------------------------------------
        テレビの登場(トップから始まる導入のとき):
        小さな W と S が四方から集まってテレビの形をつくり(画面は濃く、筐体は薄く)、
@@ -3184,6 +3303,9 @@
         });
     }
 
+    /* ----------------------------------------------------------------------
+       ボット: Bluesky の公開 API から最新の投稿を読む。読めなければ投稿の例のまま
+       ---------------------------------------------------------------------- */
     (async function botFeed() {
         const list = $('[data-feed-list]');
         if (!list || !window.fetch) return;
@@ -3271,6 +3393,11 @@
                     });
                 }, seq.total + 250)); // ロゴがそろって一拍おいてから
             },
-        }).then(() => after).then(() => { busy = false; });
+        }).then(() => after).then(() => {
+            busy = false;
+            // 導入の間に戻る・進むが押されていたら、URL の画面に合わせる
+            const want = wanted();
+            if (want && want !== cur) go(want.id, { push: false });
+        });
     }
 })();

@@ -2500,18 +2500,23 @@
             a.addEventListener('focus', () => { if (n !== ch) tune(n); });
         });
 
-        // 画面: 押すと入る。指で左右に払うとチャンネルが替わる
+        // 画面: 押すと入る。指で左右に払うとチャンネルが替わる(右へ払うと数字が増え、つまみも右へ回る)
         let sx = 0, sy = 0, swiped = false;
         screenEl.addEventListener('touchstart', (e) => {
             sx = e.touches[0].clientX;
             sy = e.touches[0].clientY;
             swiped = false;
         }, { passive: true });
+        // 払う指が少し縦に動いても、ページ(テレビ)が上下にずれないようにする。
+        // CSS の touch-action: none に加えて、引っぱると跳ね返るブラウザ(iPhone の Safari など)のためにここでも止める
+        screenEl.addEventListener('touchmove', (e) => {
+            if (e.cancelable) e.preventDefault();
+        }, { passive: false });
         screenEl.addEventListener('touchend', (e) => {
             const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
             if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.3) {
                 swiped = true;
-                tune(ch + (dx < 0 ? 1 : -1));
+                tune(ch + (dx > 0 ? 1 : -1));
             }
         }, { passive: true });
         screenEl.addEventListener('click', () => {

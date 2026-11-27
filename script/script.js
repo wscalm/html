@@ -35,6 +35,9 @@
     const header = $('.site-header');
     const dock = $('.dock');
 
+    // 音(script/sound.js)。読めなかったときは鳴らさない
+    const sfx = window.wsSound || { play: () => () => {}, snow: () => {}, ready: () => Promise.resolve() };
+
     /* ----------------------------------------------------------------------
        ロゴ: 1 文字ずつに分けて、画面幅いっぱいに合わせる
        ---------------------------------------------------------------------- */
@@ -714,20 +717,28 @@
 
         // ③ 残りの文字。近い W から外側へ順に、横から切り出す
         let last = 0;
+        const side = (i) => (i / (letters.length - 1)) * 2 - 1; // 音の左右
+        const cuts = [];
         letters.forEach(({ el }, i) => {
             if (W_AT.includes(i)) return;
             const near = W_AT.reduce((b, j) => (Math.abs(j - i) < Math.abs(b - i) ? j : b), 0);
             const dir = Math.sign(i - near);
             const delay = SPLIT + DUR - 80 + (Math.abs(i - near) - 1) * 120;
             last = Math.max(last, delay + 320);
+            cuts.push([delay / 1000, side(i)]);
             add(el, [
                 { clipPath: dir > 0 ? 'inset(-30% 100% -30% 0)' : 'inset(-30% 0 -30% 100%)', transform: `translateX(${-14 * dir}px)`, opacity: 1 },
                 { clipPath: 'inset(-30% 0 -30% 0)', transform: 'translateX(0px)', opacity: 1 },
             ], { duration: 320, delay, easing: 'cubic-bezier(.2, .9, .1, 1)' });
         });
 
+        const hush = sfx.play('introWord', { split: SPLIT / 1000, dur: DUR / 1000, ws: W_AT.map(side), letters: cuts });
+
         // 途中で画面の大きさが変わったら、位置がずれるので最後の形まで飛ばす
-        const jump = () => anims.forEach((a) => a.finish());
+        const jump = () => {
+            hush(.05);
+            anims.forEach((a) => a.finish());
+        };
         addEventListener('resize', jump);
         const stop = () => {
             removeEventListener('resize', jump);
@@ -754,16 +765,17 @@
         const M = 4; // ノイズの層は画面より上下左右 M マスずつ大きく描き、ずらしても端が欠けないようにする
         const SEG = 6; // 消えるときの 1 行の区切り数
         const CFG = {
+            // 導入のノイズは、形ができるまでを短めに(以前の 0.8 倍)。グリッチは後半ほど多く大きくして、盛り上げる
             intro: {
-                cover: 1.0, swap: 0, resolve: 2.9, settle: .7, reveal: 4.0,
-                step: .06, gbase: .25, gstep: .045, events: 70, evFrom: .2,
-                flashes: [1.74, 2.22],
+                cover: .8, swap: 0, resolve: 2.32, settle: .56, reveal: 3.2,
+                step: .06, gbase: .25, gstep: .045, events: 120, evFrom: .16,
+                flashes: [1.39, 1.78],
             },
             // トップから始まるとき: 画面の形ではなく、大きな W ひとつの形をつくる
             introW: {
-                cover: 1.0, swap: 0, resolve: 2.5, settle: .6, reveal: 3.3,
-                step: .06, gbase: .25, gstep: .045, events: 64, evFrom: .2,
-                flashes: [1.45, 1.9],
+                cover: .8, swap: 0, resolve: 2.0, settle: .48, reveal: 2.64,
+                step: .06, gbase: .25, gstep: .045, events: 110, evFrom: .16,
+                flashes: [1.16, 1.52],
             },
             move: {
                 cover: .3, swap: .3, resolve: .52, settle: .3, reveal: .86,
@@ -914,17 +926,20 @@
             r.segOff = Array.from({ length: rows }, (_, row) => Array.from({ length: SEG }, (__, s) => (
                 c.resolve + bias((s + .5) / SEG, (row + .5) / rows) * c.settle * .65 + Math.random() * c.settle * .35
             )));
-            // ピリッと走るノイズ: 横にずれる帯と、白黒が反転した小さな四角。導入では終盤ほど多い。
+            // ピリッと走るノイズ: 横にずれる帯と、白黒が反転した小さな四角。
+            // 導入では後半ほど多く(数は時刻の 2 乗に比例)、大きく、大きくずれる。大きな W ができる直前がいちばん激しい。
             // 暗いところで見ても目に痛くないよう、大きく反転させない。帯はずらすだけ(反転するのは 1 行の細い帯と小さな四角)
             r.events = Array.from({ length: c.events }, () => {
                 const band = Math.random() < .72;
-                const u = r.mode !== 'move' ? Math.sqrt(Math.random()) : Math.random();
-                const h = band ? 1 + ((Math.random() * 5) | 0) : 1 + ((Math.random() * 2) | 0);
+                const intro = r.mode !== 'move';
+                const u = intro ? Math.cbrt(Math.random()) : Math.random();
+                const k = intro ? .4 + u : 1; // 大きさ(移動のときは以前のまま)
+                const h = band ? 1 + ((Math.random() * 5 * k) | 0) : 1 + ((Math.random() * 2) | 0);
                 return {
                     t: c.evFrom + (c.resolve - .06 - c.evFrom) * u, dur: rand(.045, .12),
                     r0: (Math.random() * rows) | 0, h,
-                    c0: band ? 0 : (Math.random() * cols) | 0, w: band ? cols : 2 + ((Math.random() * 7) | 0),
-                    dx: band ? (Math.random() < .5 ? -1 : 1) * (1 + ((Math.random() * 5) | 0)) : 0,
+                    c0: band ? 0 : (Math.random() * cols) | 0, w: band ? cols : 2 + ((Math.random() * 7 * k) | 0),
+                    dx: band ? (Math.random() < .5 ? -1 : 1) * (1 + ((Math.random() * 5 * k) | 0)) : 0,
                     inv: !band || (h === 1 && Math.random() < .35),
                 };
             });
@@ -935,6 +950,13 @@
             }
             r.t0 = performance.now();
             r.raf = requestAnimationFrame(frame);
+            // 導入の音(グリッチの帯と同じ時刻にガリッ)。スキップしたら引っこめる
+            if (r.mode !== 'move') {
+                r.hush = sfx.play('introNoise', {
+                    cover: c.cover, resolve: c.resolve, settle: c.settle, reveal: c.reveal, flashes: c.flashes, top: r.mode === 'introW',
+                    events: r.events.map((e) => [e.t, e.dur, e.h, e.w / cols, ((e.c0 + e.w / 2) / cols) * 2 - 1, e.dx, e.inv]),
+                });
+            }
             // 覆い終わってから見えるようになるまで、背景は隠れているので描かない
             setTimeout(() => { if (run === r && !r.revealed) field.pause(true); }, c.cover * 1000);
         }
@@ -1134,6 +1156,7 @@
             r.aborted = true;
             cancelAnimationFrame(r.raf);
             detach();
+            if (r.hush) r.hush(.08);
             if (!r.swapped) {
                 r.swapped = true;
                 r.swap && r.swap();
@@ -1166,10 +1189,14 @@
                     addEventListener('wheel', abort, { passive: true });
                     wrap.addEventListener('pointerdown', abort);
                     // canvas に描く文字は Web フォントを待ってから(CSS が届くのも含めて、最大 1.2 秒)
-                    const wait = document.fonts ? fontsCss.then(() => Promise.all([
-                        document.fonts.load('700 100px "Inter Tight"', 'WS'),
-                        document.fonts.load(`${MARK_WEIGHT} 100px "Unbounded"`, 'WSORK.'),
-                    ])).catch(() => {}) : null;
+                    // 音を入れている人は、音の出口が開くのも少し待つ(リロードしたときは、押さなくても開くブラウザがある)
+                    const wait = Promise.all([
+                        document.fonts ? fontsCss.then(() => Promise.all([
+                            document.fonts.load('700 100px "Inter Tight"', 'WS'),
+                            document.fonts.load(`${MARK_WEIGHT} 100px "Unbounded"`, 'WSORK.'),
+                        ])).catch(() => {}) : null,
+                        sfx.ready(250),
+                    ]);
                     Promise.race([wait, new Promise((res) => setTimeout(res, 1200))]).then(() => begin(r));
                 } else {
                     begin(r);
@@ -1272,13 +1299,19 @@
                     t.classList.remove('is-typing');
                 });
             },
-            // 画面が見えたら(W と S が本物に替わったら)、端末に 1 行ずつ打ちこむ
+            // 画面が見えたら(W と S が本物に替わったら)、端末に 1 行ずつ打ちこむ。
+            // 行が出るたびにカタッ(打ちこんだ行はコツ)。間隔は CSS の .term.is-typing .tl と同じ
             type(s) {
                 if (RM) return;
                 $$('[data-term]', s.el).forEach((t) => {
                     t.classList.remove('is-typing');
                     void t.offsetWidth;
                     t.classList.add('is-typing');
+                    const list = $$('.tl:not(.is-live)', t).map((l) => [
+                        .35 + (parseFloat(l.style.getPropertyValue('--i')) || 0) * .07,
+                        !!$('.ps', l) && !l.classList.contains('term-prompt'),
+                    ]);
+                    stops.push(sfx.play('lines', list));
                 });
             },
         };
@@ -1286,7 +1319,7 @@
 
     // 背景の W と S を静かにする所: ヘッダーの文字、もどるボタン、いまの画面の data-quiet
     field.quiet(() => [
-        $('.logo', header), $('.nav', header),
+        $('.logo', header), $('.nav', header), $('.sound-toggle', header),
         ...$$('.dock-btn:not([hidden])', dock),
         ...(cur ? $$('[data-quiet]', cur.el) : []),
     ]);
@@ -1340,6 +1373,8 @@
         busy = true;
         const containers = [next.el, dock];
         next.el.classList.add('is-forming');
+        // ピリピリは、W と S が流れてくる側から(前後へは進む向き、押して入るときは押した所)
+        sfx.play('move', dir ? dir.x * .4 : origin ? ((origin.x / innerWidth) * 2 - 1) * .5 : 0);
         fx.play({
             mode: 'move', dir, origin, containers,
             swap: () => {
@@ -1507,6 +1542,7 @@
         held.forEach((el) => { el.style.opacity = '0'; });
         // ページが替わった瞬間(引っかかりやすい所)は、グリッチでごまかす
         glitch.burst(300);
+        sfx.play('glitch', 300);
         tear(z);
         // つなぐ部分に data-part をもどすのは、ちらつきの印(is-revealing)が外れてから(先にもどすと、もう一度ちらつく)
         let revealEnd = Infinity;
@@ -1530,6 +1566,7 @@
             if (target && !swapped && p >= SWAP[1][0]) {
                 swapped = true;
                 glitch.burst(260, target.getBoundingClientRect());
+                sfx.play('glitch', 240, .7);
                 tear(z);
             }
         }).then(() => {
@@ -1564,6 +1601,7 @@
             el.style.transformOrigin = `${W / 2 - (r.left - (m ? m.e : 0))}px ${H / 2 - (r.top - (m ? m.f : 0))}px`;
         });
         glitch.burst(420);
+        sfx.play('eject'); // ガガッ → プツン(長さは EJECT と SHAKE に合わせてある)
         const EJECT = 380, SHAKE = .55;
         let jx = 0, jy = 0, last = 0;
         tween(EJECT, (p) => {
@@ -1609,6 +1647,7 @@
             set(0, 0);
             glitch.burst(360);
             const DUR = 760, CLEAR = .5; // 勢いよく引き(ヒュッ)、半ばで砂嵐が止んで番組にもどる
+            sfx.play('whoosh', DUR, true, 0, .6);
             const easeOut = (t) => 1 - (1 - t) ** 4;
             let cleared = false;
             tween(DUR, (p) => {
@@ -1690,6 +1729,9 @@
         let ch = 1, on = false, visible = false, waiting = false;
         let raf = 0, frames = [], fKey = '', fi = 0, lastF = 0, burstUntil = 0, tunedAt = 0;
         let osdTimer = 0, swapTimer = 0, reelTimer = 0, hoverTimer = 0;
+        // 砂嵐の音: 番組のないチャンネルでは小さく、はじき出された直後は大きく鳴り続ける
+        const snowSound = () => sfx.snow(!on || !visible || document.hidden ? 0
+            : screenEl.classList.contains('is-jammed') ? 1 : chan(ch) ? 0 : .3);
 
         // つまみのまわりの目盛り(番組のない番号は薄く)
         const nums = Array.from({ length: N }, (_, i) => {
@@ -2278,7 +2320,11 @@
             cancelAnimationFrame(raf);
             raf = 0;
         }
-        document.addEventListener('visibilitychange', () => (document.hidden ? stop() : visible && start()));
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stop();
+            else if (visible) start();
+            snowSound();
+        });
 
         // プロダクトの番組は、作品の画面を順に映す
         function reel() {
@@ -2298,12 +2344,16 @@
             }, 2600);
         }
 
-        function tune(n) {
+        // click: つまみのカチッも鳴らす(電源が入って映るときは、砂嵐のザッだけ)
+        function tune(n, click = true) {
             if (!on) return;
             n = ((n - 1 + N) % N) + 1;
             ch = n;
             tunedAt = performance.now();
             const c = chan(n);
+            sfx.play('static', RM ? 120 : 300);
+            if (click) sfx.play('click');
+            snowSound();
             chans.forEach((o) => o.prog.classList.remove('is-still'));
             knob.style.transform = `rotate(${ANG(n)}deg)`;
             burstUntil = tunedAt + (RM ? 0 : 300);
@@ -2342,10 +2392,11 @@
             const done = () => {
                 screenEl.classList.remove('is-off', 'is-powering');
                 on = true;
-                tune(ch);
+                tune(ch, false);
                 if (typeof then === 'function') then();
                 else hint();
             };
+            sfx.play('power');
             if (RM) {
                 done();
                 return;
@@ -2384,6 +2435,8 @@
             const { z, bd, r, full, at } = plate(c);
             busy = true;
             glitch.burst(160, r); // 写しの板に替わる瞬間も、グリッチでごまかす
+            sfx.play('glitch', 140, .7);
+            sfx.play('whoosh', 420);
             if (bd) bd.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' });
             z.animate([
                 { transform: `translate(${r.left}px, ${r.top}px) scale(1)`, borderRadius: '24px' },
@@ -2520,7 +2573,9 @@
                 if (RM) return;
                 screenEl.classList.toggle('is-jammed', jammed);
                 burstUntil = jammed ? Infinity : performance.now() + 60;
+                snowSound();
                 if (!jammed) {
+                    sfx.play('snap');
                     screenEl.classList.remove('is-tuning');
                     void screenEl.offsetWidth;
                     screenEl.classList.add('is-tuning');
@@ -2559,6 +2614,7 @@
             },
             toggle(show) {
                 visible = show;
+                snowSound();
                 if (!show) {
                     stop();
                     clearInterval(reelTimer);
@@ -2647,6 +2703,7 @@
                     img.src = btn.dataset.src;
                     img.alt = btn.dataset.alt;
                     flicker(media);
+                    sfx.play('static', 110, .5);
                 };
                 next.src = btn.dataset.src;
             });
@@ -2671,6 +2728,7 @@
         osd.setAttribute('aria-hidden', 'true');
         osd.textContent = `${back ? '◀◀' : '▶▶'} ${label}`;
         media.append(osd);
+        sfx.play(RM ? 'snap' : 'tape', back);
         const done = () => {
             osd.textContent = label;
             media._osd = setTimeout(() => osd.classList.add('is-out'), 900);
@@ -2891,6 +2949,9 @@
             running = true;
             input.disabled = true;
             show();
+            // 走り抜ける長さ(1 コマで RM なら 4 マス・60 ミリ秒、ふだんは 1 マス・28 ミリ秒)と、煙が替わる速さ(4 コマ)に合わせる
+            const tick = RM ? 60 : 28, frames = Math.ceil((cols + W) / (RM ? 4 : 1));
+            sfx.play('train', frames * tick, (tick * 4) / 1000);
             return new Promise((done) => {
                 let x = cols, k = 0;
                 const step = () => {
@@ -2937,28 +2998,36 @@
             sync();
         }
 
-        input.addEventListener('input', sync);
+        input.addEventListener('input', () => {
+            sfx.play('key');
+            sync();
+        });
         input.addEventListener('keydown', (e) => {
             if (running) return e.preventDefault();
             if (e.key === 'Enter') {
                 e.preventDefault();
+                sfx.play('key', true);
                 const v = input.value;
                 input.value = '';
                 sync();
                 run(v);
             } else if (e.key === 'Tab' && input.value) {
                 e.preventDefault();
+                sfx.play('key');
                 complete();
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
+                sfx.play('key');
                 hi = clamp(hi + (e.key === 'ArrowUp' ? -1 : 1), 0, hist.length);
                 input.value = hist[hi] || '';
                 sync();
             } else if (e.key === 'l' && e.ctrlKey) {
                 e.preventDefault();
+                sfx.play('key');
                 CMDS.clear();
             } else if (e.key === 'c' && e.ctrlKey && !getSelection().toString()) {
                 e.preventDefault();
+                sfx.play('key');
                 put(`${PS} ${esc(input.value)}^C`, '');
                 input.value = '';
                 sync();
@@ -3208,10 +3277,12 @@
             const TS = T1 + RE1 * .75; // 描き変え始める時刻。全部が細かくなりきる前(7〜8 割ほど)に始める
             const t0 = performance.now();
             let raf = 0, shown = false, ended = false;
+            const hush = sfx.play('introTv', { gather: GATHER / 1000, t1: T1 / 1000, re1: RE1 / 1000, ts: TS / 1000, scan: SCAN / 1000 });
 
-            const finish = () => {
+            const finish = (e) => {
                 if (ended) return;
                 ended = true;
+                if (e) hush(.05); // 画面の大きさが変わって打ち切ったとき
                 cancelAnimationFrame(raf);
                 removeEventListener('resize', finish);
                 cvs.remove();

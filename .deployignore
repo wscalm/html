@@ -1,2 +1,10 @@
-# 本番に送らないもの(rsync の --exclude-from で読む)
+# 本番に置かないもの（rsync の --exclude-from 形式。先頭の / はリポジトリ直下の意味）
+/README.md
 /docs/
+
+# 他のリポジトリや nginx が置くディレクトリ。ここに書いておくと --delete で消されない。
+# 消すと、トップのデプロイのたびにサーバーのそのディレクトリが丸ごと消える(2026-11-28 に実際に消えた)
+/booklog/
+/romberg/
+/generate-100masu/
+/.well-known/

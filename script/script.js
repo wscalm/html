@@ -2919,8 +2919,8 @@
             },
             git(a) {
                 if (a[0] !== 'log') return pre(a[0] ? `git: '${a[0]}' は git のコマンドではない` : 'usage: git log');
-                put([['3f9a2c1', '2026.04', '東京の IT 企業 入社', true], ['8b1e7d4', '2026.03', '岡山大学大学院 修了'], ['c27a5f0', '2024.04', '岡山大学大学院 進学'], ['e91d2b6', '2024.03', '岡山大学 卒業'], ['5d40e9b', '2020.04', '岡山大学 入学'], ['0a6c3e8', '2020.03', '大阪の高校 卒業'], ['0000001', '2001.04', 'オギャー']]
-                    .map(([h, d, t, head]) => `<span class="tl-git">*</span> <span class="glog-hash">${h}</span>${head ? ' <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span>' : ''} ${d} ${t}`).join('\n'), 'tl-out tl-pre');
+                put([['3f9a2c1', '2026.04', 'deploy: 東京の IT 企業 入社', true], ['8b1e7d4', '2026.03', 'release: 岡山大学大学院 修了'], ['c27a5f0', '2024.04', 'update: 岡山大学大学院 進学'], ['e91d2b6', '2024.03', 'release: 岡山大学 卒業'], ['5d40e9b', '2020.04', 'add: 岡山大学 入学'], ['0a6c3e8', '2020.03', 'release: 大阪の高校 卒業'], ['0000001', '2001.04', 'init: オギャー']]
+                    .map(([h, d, t, head]) => `<span class="tl-git">*</span> <span class="glog-hash">${h}</span>${head ? ' <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span>' : ''} ${d} ${t.replace(/^(\w+):/, '<b class="glog-type">$1:</b>')}`).join('\n'), 'tl-out tl-pre');
             },
             exit: () => go(cur.parent || 'top'),
             // トップにもどって、導入をノイズからもう一度(音を入れていれば音付き)

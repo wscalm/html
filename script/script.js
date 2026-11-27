@@ -548,14 +548,14 @@
         const CFG = {
             intro: {
                 cover: 1.0, swap: 0, resolve: 2.9, settle: .7, reveal: 4.0,
-                step: .06, gbase: .25, gstep: .045, events: 38, evFrom: .25,
-                flashes: [1.74, 2.22], climax: [2.44, 2.53, 2.63, 2.71, 2.78],
+                step: .06, gbase: .25, gstep: .045, events: 70, evFrom: .2,
+                flashes: [1.74, 2.22], climax: [], // 画面全体が白黒反転する山場は、目に強すぎるのでやめた
             },
             // トップから始まるとき: 画面の形ではなく、大きな W ひとつの形をつくる
             introW: {
                 cover: 1.0, swap: 0, resolve: 2.5, settle: .6, reveal: 3.3,
-                step: .06, gbase: .25, gstep: .045, events: 34, evFrom: .25,
-                flashes: [1.45, 1.9], climax: [2.05, 2.13, 2.22, 2.3],
+                step: .06, gbase: .25, gstep: .045, events: 64, evFrom: .2,
+                flashes: [1.45, 1.9], climax: [],
             },
             move: {
                 cover: .3, swap: .3, resolve: .52, settle: .3, reveal: .86,
@@ -689,16 +689,18 @@
             r.segOff = Array.from({ length: rows }, (_, row) => Array.from({ length: SEG }, (__, s) => (
                 c.resolve + bias((s + .5) / SEG, (row + .5) / rows) * c.settle * .65 + Math.random() * c.settle * .35
             )));
-            // ピリッと走るノイズ: 横にずれる帯と、白黒が反転した四角。導入では終盤ほど多い
+            // ピリッと走るノイズ: 横にずれる帯と、白黒が反転した小さな四角。導入では終盤ほど多い。
+            // 暗いところで見ても目に痛くないよう、大きく反転させない。帯はずらすだけ(反転するのは 1 行の細い帯と小さな四角)
             r.events = Array.from({ length: c.events }, () => {
-                const band = Math.random() < .6;
+                const band = Math.random() < .72;
                 const u = r.mode !== 'move' ? Math.sqrt(Math.random()) : Math.random();
+                const h = band ? 1 + ((Math.random() * 5) | 0) : 1 + ((Math.random() * 2) | 0);
                 return {
-                    t: c.evFrom + (c.resolve - .06 - c.evFrom) * u, dur: rand(.035, .09),
-                    r0: (Math.random() * rows) | 0, h: 1 + ((Math.random() * (band ? 4 : 3)) | 0),
-                    c0: band ? 0 : (Math.random() * cols) | 0, w: band ? cols : 3 + ((Math.random() * 16) | 0),
-                    dx: band ? (Math.random() < .5 ? -1 : 1) * (1 + ((Math.random() * 3) | 0)) : 0,
-                    inv: !band || Math.random() < .3,
+                    t: c.evFrom + (c.resolve - .06 - c.evFrom) * u, dur: rand(.045, .12),
+                    r0: (Math.random() * rows) | 0, h,
+                    c0: band ? 0 : (Math.random() * cols) | 0, w: band ? cols : 2 + ((Math.random() * 7) | 0),
+                    dx: band ? (Math.random() < .5 ? -1 : 1) * (1 + ((Math.random() * 5) | 0)) : 0,
+                    inv: !band || (h === 1 && Math.random() < .35),
                 };
             });
             if (c.swap <= 0) {
@@ -780,7 +782,7 @@
                 const still = t >= c.resolve;
                 r.ox = still ? 0 : ((Math.random() * 5) | 0) - 2;
                 r.oy = still ? 0 : ((Math.random() * 3) | 0) - 1;
-                r.nA = Math.random() < .06 + heat * .14 ? 1 : .45 + heat * .35 + Math.random() * .15;
+                r.nA = .45 + heat * .25 + Math.random() * .1; // 濃さの振れは小さく(大きく明滅すると目に痛い)
                 r.lA = rand(.15, .45);
                 r.nextSwitch = t + lerp(.1, .03, heat) * rand(.7, 1.3);
             }
@@ -816,7 +818,7 @@
                 ctx.fill(r.allCut);
             }
 
-            // 導入の山場: 白黒が反転した画面が数回はさまる
+            // 導入の山場: 白黒が反転した画面が数回はさまる(いまは使っていない。climax を空にしてある)
             for (const ct of c.climax) {
                 if (t < ct || t >= ct + .045) continue;
                 ctx.globalAlpha = 1;
@@ -832,9 +834,7 @@
             if (r.measured) {
                 for (const f of c.flashes) {
                     if (t < f || t >= f + .05) continue;
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = '#fff';
-                    ctx.fill(r.allCut);
+                    ctx.globalAlpha = .5; // 白く抜くと明滅が強いので、薄く重ねるだけにする
                     ctx.drawImage(lay, 0, 0, W, H);
                 }
             }
@@ -2034,24 +2034,37 @@
         if (RM || !tvEl || !tvEl.getClientRects().length) return Promise.resolve();
         tvEl.classList.add('is-assembling');
         return new Promise((done) => {
-            const cell = Math.max(7, Math.round(cellSize() * .8));
+            /* 2 段階で細かくなる。
+               ① 粗い W と S が飛んできて集まる → ② 半分の大きさの W と S に割れ、くっきりしたテレビの絵で一度止まる →
+               上から本物に描き変える(さらに細かい灰色の点の段階は、のっぺりするので入れない) */
+            const C1 = Math.max(8, 2 * Math.round((cellSize() * .8) / 2)); // 2 で割り切れる大きさにして、半分に割る
+            const SIZES = [C1, C1 / 2];
             const box = tvEl.getBoundingClientRect();
             const rectOf = (sel) => $(sel, tvEl).getBoundingClientRect();
-            const body = rectOf('.tv-body'), frameR = rectOf('.tv-screen-frame'), dial = rectOf('.tv-dial');
+            const body = rectOf('.tv-body'), dial = rectOf('.tv-dial');
             const knob = $('.tv-knob', tvEl), tw = body.width;
-            const x0 = box.left - cell, y0 = box.top - cell;
-            const cols = Math.ceil(box.width / cell) + 2, rows = Math.ceil(box.height / cell) + 2;
+            const x0 = box.left - C1, y0 = box.top - C1;
+            const EW = (Math.ceil(box.width / C1) + 2) * C1, EH = (Math.ceil(box.height / C1) + 2) * C1; // 絵の範囲
 
-            // どのマスを、どの濃さの文字で埋めるか。あとに描く部品ほど上に来る
-            const round = (g, r, rad) => {
+            // 部品の形と濃さ(0 は白、1 は黒)。あとに描く部品ほど上に来る。c はマスの大きさで、縁取りは 1 マス分
+            const rr = (g, r, rad, inset = 0) => {
                 g.beginPath();
-                if (g.roundRect) g.roundRect(r.left - x0, r.top - y0, r.width, r.height, rad);
-                else g.rect(r.left - x0, r.top - y0, r.width, r.height);
+                const x = r.left - x0 + inset, y = r.top - y0 + inset, w = r.width - inset * 2, h = r.height - inset * 2;
+                if (g.roundRect) g.roundRect(x, y, w, h, Math.max(0, rad - inset));
+                else g.rect(x, y, w, h);
                 g.fill();
             };
-            // 脚は筐体の下面から生えていて、上の端は筐体に隠れる。先に描いて、筐体で上書きする
+            const text = (g, el, str, align = 'left') => {
+                const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+                g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+                g.textAlign = align;
+                g.textBaseline = 'middle';
+                g.fillText(str, (align === 'center' ? r.left + r.width / 2 : r.left) - x0, r.top + r.height / 2 - y0);
+            };
+            const knobAng = (parseFloat((knob.style.transform.match(/rotate\(([-\d.]+)deg/) || [])[1]) || 0) * Math.PI / 180;
             const regions = [
-                [.6, (g) => $$('.tv-leg', tvEl).forEach((leg) => {
+                // 脚は筐体の下面から生えていて、上の端は筐体に隠れる。先に描いて、筐体で上書きする
+                [.55, (g) => $$('.tv-leg', tvEl).forEach((leg) => {
                     const rod = $('.tv-leg-rod', leg).getBoundingClientRect();
                     const s = leg.classList.contains('is-right') ? -1 : 1; // 左の脚は左下へ、右の脚は右下へ開く
                     g.lineWidth = tw * .024;
@@ -2060,57 +2073,126 @@
                     g.lineTo((s > 0 ? rod.left + tw * .01 : rod.right - tw * .01) - x0, rod.bottom - y0);
                     g.stroke();
                 })],
-                [.3, (g) => round(g, body, tw * .045)],
-                [.45, (g) => { const r = rectOf('.tv-grille'); g.fillRect(r.left - x0, r.top - y0, r.width, r.height); }],
-                [.9, (g) => round(g, rectOf('.tv-mini'), tw * .018)],
-                [.5, (g) => { const r = rectOf('.tv-brand'); g.fillRect(r.left - x0, r.top - y0, r.width, r.height); }],
-                [.72, (g) => {
+                [.45, (g) => rr(g, body, tw * .045)], // 筐体の縁
+                [.13, (g, c) => rr(g, body, tw * .045, c)], // 筐体
+                [.42, (g) => { const sp = $('.tv-grille span', tvEl), r = rectOf('.tv-grille'), lh = r.height / 3;
+                    g.save(); g.beginPath(); g.rect(r.left - x0, r.top - y0, r.width, r.height); g.clip();
+                    const cs = getComputedStyle(sp);
+                    g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.textBaseline = 'middle'; g.textAlign = 'left';
+                    for (let i = 0; i < 3; i++) g.fillText('WSWS'.repeat(12), r.left - x0 - (i % 2) * lh * .7, r.top - y0 + lh * (i + .5));
+                    g.restore(); }],
+                [.5, (g) => { const r = rectOf('.tv-brand'); g.fillRect(r.left - x0, r.top + r.height * .25 - y0, r.width, r.height * .5); }], // 銘板(小さすぎて字にならないので帯で)
+                [.5, (g) => $$('.tv-num', tvEl).forEach((n) => text(g, n, n.textContent, 'center'))],
+                [.85, (g) => rr(g, rectOf('.tv-mini'), tw * .018)],
+                [.97, (g, c) => rr(g, rectOf('.tv-mini-screen'), tw * .011, Math.min(c * .3, 1))],
+                [.5, (g) => { g.beginPath(); g.arc(dial.left + dial.width / 2 - x0, dial.top + dial.height / 2 - y0, knob.offsetWidth / 2, 0, Math.PI * 2); g.fill(); }], // つまみの縁
+                [.2, (g, c) => { g.beginPath(); g.arc(dial.left + dial.width / 2 - x0, dial.top + dial.height / 2 - y0, Math.max(0, knob.offsetWidth / 2 - c), 0, Math.PI * 2); g.fill(); }],
+                [.9, (g) => { // つまみの針
+                    const k = knob.getBoundingClientRect(), r = k.width / 2, cx = k.left + r - x0, cy = k.top + r - y0;
+                    g.lineWidth = Math.max(3, r * .12); g.lineCap = 'round';
                     g.beginPath();
-                    g.arc(dial.left + dial.width / 2 - x0, dial.top + dial.height / 2 - y0, knob.offsetWidth / 2, 0, Math.PI * 2);
-                    g.fill();
-                }],
-                [.92, (g) => round(g, frameR, tw * .05)],
+                    g.moveTo(cx + Math.sin(knobAng) * r * .25, cy - Math.cos(knobAng) * r * .25);
+                    g.lineTo(cx + Math.sin(knobAng) * r * .88, cy - Math.cos(knobAng) * r * .88);
+                    g.stroke(); }],
+                [.85, (g) => rr(g, rectOf('.tv-screen-frame'), tw * .05)], // 画面の縁
+                [.97, (g) => rr(g, rectOf('.tv-screen'), tw * .045)], // ブラウン管
             ];
-            const level = new Float32Array(cols * rows);
-            const m = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-            m.canvas.width = cols;
-            m.canvas.height = rows;
-            regions.forEach(([a, draw]) => {
-                m.setTransform(1, 0, 0, 1, 0, 0);
-                m.clearRect(0, 0, cols, rows);
-                m.setTransform(1 / cell, 0, 0, 1 / cell, 0, 0);
-                m.fillStyle = m.strokeStyle = '#000';
-                draw(m);
-                const d = m.getImageData(0, 0, cols, rows).data;
-                for (let i = 0; i < level.length; i++) if (d[i * 4 + 3] > 100) level[i] = a;
-            });
+            // マスの大きさ c ごとに、各マスの濃さを決める
+            const levelsAt = (c) => {
+                const cols = EW / c, rows = EH / c, level = new Float32Array(cols * rows);
+                const m = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+                m.canvas.width = cols;
+                m.canvas.height = rows;
+                regions.forEach(([a, draw]) => {
+                    m.setTransform(1, 0, 0, 1, 0, 0);
+                    m.clearRect(0, 0, cols, rows);
+                    m.setTransform(1 / c, 0, 0, 1 / c, 0, 0);
+                    m.fillStyle = m.strokeStyle = '#000';
+                    draw(m, c);
+                    const d = m.getImageData(0, 0, cols, rows).data;
+                    for (let i = 0; i < level.length; i++) if (d[i * 4 + 3] > 100) level[i] = a;
+                });
+                return { c, cols, rows, level };
+            };
+            const L = SIZES.map(levelsAt);
 
-            // 文字はテレビの中心から外へ向かう方へ散らばっていて、内へギュッと集まる
+            // ① 粗い文字はテレビの中心から外へ向かう方へ散らばっていて、内へギュッと集まる
             const cx = box.left + box.width / 2, cy = box.top + box.height / 2;
             const far = Math.hypot(innerWidth, innerHeight);
             const ps = [];
-            for (let i = 0; i < level.length; i++) {
-                if (!level[i]) continue;
-                const tx = x0 + ((i % cols) + .5) * cell, ty = y0 + (((i / cols) | 0) + .5) * cell;
+            L[0].level.forEach((a, i) => {
+                if (!a) return;
+                const tx = x0 + ((i % L[0].cols) + .5) * C1, ty = y0 + (((i / L[0].cols) | 0) + .5) * C1;
                 const ang = Math.atan2(ty - cy, tx - cx) + rand(-.9, .9), d = rand(.18, .6) * far;
-                ps.push({
-                    tx, ty, sx: tx + Math.cos(ang) * d, sy: ty + Math.sin(ang) * d,
-                    a: level[i], k: Math.random() < .5 ? 0 : 1, delay: rand(0, 520), dur: rand(850, 1150),
-                });
-            }
+                ps.push({ i, tx, ty, sx: tx + Math.cos(ang) * d, sy: ty + Math.sin(ang) * d,
+                    a, k: Math.random() < .5 ? 0 : 1, delay: rand(0, 520), dur: rand(850, 1150) });
+            });
 
-            const sprite = (ch) => {
-                const c = document.createElement('canvas');
-                c.width = c.height = Math.ceil(cell * DPR);
-                const g = c.getContext('2d');
+            const sprite = (ch, c) => {
+                const s = document.createElement('canvas');
+                s.width = s.height = Math.ceil(c * DPR);
+                const g = s.getContext('2d');
                 g.scale(DPR, DPR);
-                g.font = `800 ${cell * .94}px ${FONT}`;
+                g.font = `800 ${c * .94}px ${FONT}`;
                 g.textAlign = 'center';
                 g.fillStyle = '#111';
-                g.fillText(ch, cell / 2, cell * .84);
-                return c;
+                g.fillText(ch, c / 2, c * .84);
+                return s;
             };
-            const spr = [sprite('W'), sprite('S')];
+            const spr = [sprite('W', C1), sprite('S', C1)];
+
+            // ② の絵は止まっているので、先に描いておく(位置はテレビの左上からの相対)
+            const sheet = () => {
+                const s = document.createElement('canvas');
+                s.width = Math.round(EW * DPR);
+                s.height = Math.round(EH * DPR);
+                const g = s.getContext('2d');
+                g.scale(DPR, DPR);
+                return { s, g };
+            };
+            // 点ごとに直接書きこむ(文字や四角を何万回も描くより、ずっと速い)
+            const paint = (lv, put) => {
+                const sh = sheet(), w = sh.s.width, h = sh.s.height, img = sh.g.createImageData(w, h), px = img.data;
+                const c = lv.c * DPR;
+                lv.level.forEach((a, i) => {
+                    if (!a) return;
+                    const cx = i % lv.cols, cy = (i / lv.cols) | 0;
+                    const xa = Math.round(cx * c), xb = Math.min(w, Math.round((cx + 1) * c));
+                    const ya = Math.round(cy * c), yb = Math.min(h, Math.round((cy + 1) * c));
+                    const k = Math.random() < .5 ? 0 : 1;
+                    for (let y = ya; y < yb; y++) {
+                        for (let x = xa; x < xb; x++) put(px, (y * w + x) * 4, a, (x - xa) / (xb - xa), (y - ya) / (yb - ya), k);
+                    }
+                });
+                sh.g.putImageData(img, 0, 0);
+                return sh;
+            };
+            // ② 半分の大きさの W と S(文字の形は、一度だけ描いた見本から写す)
+            const glyphs = ['W', 'S'].map((ch) => {
+                const sp = sprite(ch, SIZES[1]);
+                return { n: sp.width, d: sp.getContext('2d').getImageData(0, 0, sp.width, sp.height).data };
+            });
+            const mid = paint(L[1], (px, o, a, u, v, k) => {
+                const gl = glyphs[k], al = gl.d[(((v * gl.n) | 0) * gl.n + ((u * gl.n) | 0)) * 4 + 3];
+                if (!al) return;
+                px[o] = px[o + 1] = px[o + 2] = 17;
+                px[o + 3] = al * a;
+            });
+            // 細かくなる順番: 粗いマスごとに時刻を決め、その中の細かいマスも同じ時刻で替わる
+            const RE1 = 700; // ① → ② にかける時間
+            const due1 = new Float32Array(L[0].level.length).map(() => rand(0, RE1));
+            const shown1 = new Uint8Array(due1.length);
+            // どのマスが細かくなったかの印(1 マス 1 点の小さな画像)。これを引き伸ばして ② の絵を切り抜く
+            const maskOf = (lv) => {
+                const c = document.createElement('canvas');
+                c.width = lv.cols;
+                c.height = lv.rows;
+                const g = c.getContext('2d');
+                return { c, g, img: g.createImageData(lv.cols, lv.rows), dirty: false };
+            };
+            const m1 = maskOf(L[0]);
+            const mark = (m, i) => { m.img.data[i * 4 + 3] = 255; m.dirty = true; };
+            const view = sheet(), tmp = sheet(); // いま見えている ② の絵
 
             const cvs = document.createElement('canvas');
             cvs.className = 'tv-assemble';
@@ -2123,7 +2205,9 @@
 
             const fly = bezier(.7, 0, .2, 1); // 溜めて、一気に寄って、ピタッと止まる(ロゴの W と同じ調子)
             const sweep = bezier(.45, 0, .55, 1);
-            const GATHER = ps.reduce((mx, p) => Math.max(mx, p.delay + p.dur), 0), HOLD = 320, SCAN = 700;
+            const GATHER = ps.reduce((mx, p) => Math.max(mx, p.delay + p.dur), 0);
+            const T1 = GATHER + 180, SCAN = 700; // 細かくなり始める時刻
+            const TS = T1 + RE1 * .75; // 描き変え始める時刻。全部が細かくなりきる前(7〜8 割ほど)に始める
             const t0 = performance.now();
             let raf = 0, shown = false, ended = false;
 
@@ -2146,6 +2230,21 @@
             };
             addEventListener('resize', finish);
 
+            // 印のついたマスだけ、絵 src を残して dst に重ねる
+            const masked = (dst, src, m, cut) => {
+                tmp.g.globalCompositeOperation = 'copy';
+                tmp.g.drawImage(src.s, 0, 0, EW, EH);
+                tmp.g.globalCompositeOperation = 'destination-in';
+                tmp.g.imageSmoothingEnabled = false;
+                tmp.g.drawImage(m.c, 0, 0, EW, EH);
+                if (cut) {
+                    tmp.g.globalCompositeOperation = 'destination-out';
+                    tmp.g.drawImage(cut.c, 0, 0, EW, EH);
+                }
+                tmp.g.globalCompositeOperation = 'source-over';
+                dst.g.drawImage(tmp.s, 0, 0, EW, EH);
+            };
+
             const frame = (now) => {
                 const t = now - t0;
                 const b = tvEl.getBoundingClientRect();
@@ -2153,32 +2252,52 @@
                 g.setTransform(DPR, 0, 0, DPR, 0, 0);
                 g.clearRect(0, 0, W, H);
 
+                // ① → ②: 粗いマスが、時刻が来たものから半分の文字に割れる
+                if (t >= T1) due1.forEach((d, i) => { if (!shown1[i] && t - T1 >= d) { shown1[i] = 1; mark(m1, i); } });
+                if (m1.dirty) {
+                    m1.g.putImageData(m1.img, 0, 0);
+                    m1.dirty = false;
+                    view.g.clearRect(0, 0, EW, EH);
+                    masked(view, mid, m1);
+                }
+
                 // 組み上がったら、上から下へ本物のテレビに描き変える
                 let scan = -Infinity;
-                if (t >= GATHER + HOLD) {
-                    const s = sweep((t - GATHER - HOLD) / SCAN);
+                if (t >= TS) {
+                    const s = sweep((t - TS) / SCAN);
                     if (s >= 1) return finish();
-                    scan = box.top + (box.height + cell) * s;
+                    scan = box.top + (box.height + C1) * s;
                     if (!shown) {
                         shown = true;
                         tvEl.classList.remove('is-assembling');
                         tvEl.classList.add('is-assembled');
                     }
                     tvEl.style.clipPath = `inset(-20% -20% ${(b.bottom - scan - oy).toFixed(1)}px -20%)`;
+                }
+
+                // ② の絵(描き変え線より下だけ)
+                const top = Math.max(0, scan - y0);
+                if (top < EH) {
+                    g.globalAlpha = 1;
+                    const sy = Math.round(top * DPR);
+                    g.drawImage(view.s, 0, sy, view.s.width, view.s.height - sy, x0 + ox, y0 + oy + sy / DPR, EW, EH - sy / DPR);
+                }
+                if (scan > -Infinity) {
                     g.globalAlpha = .55;
                     g.fillStyle = '#111';
                     g.fillRect(body.left + ox, scan + oy - .75, body.width, 1.5);
                 }
 
-                const fade = Math.min(1, t / 140);
+                // ① の粗い文字(まだ割れていないものだけ)
                 const dim = t > GATHER + 40 && t < GATHER + 80 ? .35 : 1; // 組み上がった瞬間に一度ちらつく
                 for (const p of ps) {
-                    if (p.ty - cell / 2 < scan) continue;
-                    const q = Math.min(1, Math.max(0, (t - p.delay) / p.dur));
+                    // 飛び始めるまでは描かない(外側に止まった文字が一瞬見えてしまうので)。飛びながら濃くなる
+                    if (t < p.delay || shown1[p.i] || p.ty - C1 / 2 < scan) continue;
+                    const q = Math.min(1, (t - p.delay) / p.dur);
                     const e = fly(q);
                     if (Math.random() < (q < 1 ? .2 : .015)) p.k ^= 1;
-                    g.globalAlpha = p.a * (.15 + .85 * e) * fade * dim;
-                    g.drawImage(spr[p.k], p.sx + (p.tx - p.sx) * e + ox - cell / 2, p.sy + (p.ty - p.sy) * e + oy - cell / 2, cell, cell);
+                    g.globalAlpha = p.a * Math.min(1, q * 2.5) * (.3 + .7 * e) * dim;
+                    g.drawImage(spr[p.k], p.sx + (p.tx - p.sx) * e + ox - C1 / 2, p.sy + (p.ty - p.sy) * e + oy - C1 / 2, C1, C1);
                 }
                 raf = requestAnimationFrame(frame);
             };

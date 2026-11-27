@@ -554,16 +554,16 @@ button {
     gap: .8em;
 }
 
-.tv-avatar {
+/* 長い言葉bot のアイコン(白地なので、白いカードの上では縁を付ける) */
+.tv-prog .tv-avatar {
+    position: static;
     flex: none;
-    display: grid;
-    place-items: center;
     width: 2.6em;
     height: 2.6em;
+    border: 1px solid #e0e0dc;
     border-radius: 50%;
-    background: #141414;
-    color: #fff;
-    font-weight: 700;
+    opacity: 1;
+    filter: none;
 }
 
 .tv-post-who {

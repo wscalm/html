@@ -566,29 +566,20 @@ button {
     line-height: 1.5;
 }
 
+/* 上の帯は、いまの SNS アプリのように真ん中に Bluesky の蝶だけ */
 .tv-app-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     height: 11%;
-    padding: 0 6%;
-    border-bottom: 1px solid #dcdcd8;
+    border-bottom: 1px solid #e4e4e0;
     background: #fff;
-    font-weight: 700;
 }
 
-.tv-app-bar i {
-    width: 1.4em;
-    height: .9em;
-    border-top: 2px solid #9a9a96;
-    border-bottom: 2px solid #9a9a96;
-}
-
-.tv-app-bar i:last-child {
-    width: 1.1em;
-    height: 1.1em;
-    border: 2px solid #9a9a96;
-    border-radius: 50%;
+.tv-app-bar svg {
+    width: 1.5em;
+    height: 1.5em;
+    fill: #1185fe;
 }
 
 .tv-post {
@@ -1527,7 +1518,7 @@ button {
     opacity: 0;
 }
 
-/* 使っているもの(技術)。見出しは日本語の小さな一行、表は罫線だけ */
+/* 技術構成。見出しは日本語の小さな一行、表は罫線だけ */
 .stack {
     margin-top: 28px;
 }
@@ -1604,15 +1595,21 @@ button {
     padding-bottom: 2px;
 }
 
-/* decimal.js: 等幅の d と赤い点(ロゴの decimal.js の書き方から) */
+/* decimal.js: 黒い四角に、等幅の白い d と、その右にオレンジの点(ロゴの decimal.js の書き方から)。
+   ほかのロゴと同じ四角にして、アイコンだとわかるように */
 .tech-badge--decimaljs {
-    color: #111;
-    font: 700 14px / 1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    background: #1c1c1c;
+    color: #fff;
+    font: 700 13px / 18px ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 .tech-badge--decimaljs i {
+    margin-left: -.18em;
     font-style: normal;
-    color: #e00;
+    color: #ff8a00;
 }
 
 .tech-note {
@@ -2257,6 +2254,12 @@ button {
     color: #f4f4f4;
 }
 
+/* 入学・卒業などの言葉は、途中で折り返さない(幅が狭いと 1 文字だけ次の行に落ちるので)。
+   overflow-wrap: anywhere を受け継いでいて nowrap だけでは割れるので、ひとかたまりにする */
+.glog-title span {
+    display: inline-block;
+}
+
 .tree {
     list-style: none;
 }
@@ -2590,66 +2593,55 @@ button {
     color: var(--faint);
 }
 
-/* 投稿は、テレビの 2 チャンネルと同じアプリの画面に映す */
-.monitor-screen.app {
-    background: #f1f1ef;
+/* 投稿は、いまの SNS アプリのタイムラインの形で映す(テレビの 2 チャンネルと同じ、真ん中に蝶の帯)。
+   投稿ごとの枠はなく、細い線で区切る */
+.feed-app {
+    overflow: hidden;
+    border: 1px solid #e4e4e0;
+    border-radius: 18px;
+    background: #fff;
     color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 28px 48px -34px rgba(0, 0, 0, .3);
 }
 
 .app-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    height: 44px;
-    padding: 0 18px;
-    border-bottom: 1px solid #dcdcd8;
-    background: #fff;
-    font-size: 13px;
-    font-weight: 700;
+    justify-content: center;
+    height: 52px;
+    border-bottom: 1px solid #ececea;
 }
 
-.app-bar i {
-    width: 18px;
-    height: 11px;
-    border-top: 2px solid #9a9a96;
-    border-bottom: 2px solid #9a9a96;
-}
-
-.app-bar i:last-child {
-    width: 15px;
-    height: 15px;
-    border: 2px solid #9a9a96;
-    border-radius: 50%;
+.app-logo {
+    width: 22px;
+    height: 22px;
+    fill: #1185fe;
 }
 
 .feed-list {
-    display: grid;
-    gap: 10px;
-    padding: 14px;
     list-style: none;
 }
 
+.feed-list li + li {
+    border-top: 1px solid #ececea;
+}
+
 .fpost {
-    position: relative;
-    z-index: 3; /* ガラスの映りこみより手前で押せるように */
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr);
     gap: 12px;
-    padding: 14px 16px;
-    border: 1px solid #e0e0dc;
-    border-radius: 12px;
-    background: #fff;
-    transition: border-color .2s;
+    padding: 16px 20px 14px;
+    transition: background-color .2s;
 }
 
 .fpost:hover {
-    border-color: #bdbdb8;
+    background: #fafaf8;
 }
 
 .fpost-icon {
-    width: 42px;
-    height: 42px;
-    border: 1px solid #e0e0dc;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #e6e6e2;
     border-radius: 50%;
 }
 
@@ -2658,15 +2650,45 @@ button {
     min-width: 0;
 }
 
+/* 名前・ハンドル・時刻を 1 行に。入りきらないときはハンドルを省く */
 .fpost-who {
     display: flex;
-    gap: .6em;
+    gap: .5em;
     font-size: 13px;
     line-height: 1.5;
+    white-space: nowrap;
 }
 
-.fpost-who span {
+.fpost-who b {
+    flex: none;
+}
+
+.fpost-handle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--faint);
+}
+
+.fpost-ago {
+    flex: none;
+    color: var(--faint);
+}
+
+.fpost-ago::before {
+    content: '· ';
+}
+
+.fpost-acts {
+    display: flex;
+    gap: 2.4em;
+    margin-top: 8px;
+    color: #a3a39e;
+}
+
+.fpost-acts svg {
+    width: 15px;
+    height: 15px;
 }
 
 .fpost-word {

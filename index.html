@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='7' fill='%23fff' stroke='%23111114' stroke-width='2'/%3E%3Cpath d='M4.2 10.5 6.9 21.5 9.7 14.5 12.5 21.5 15.2 10.5' fill='none' stroke='%23111114' stroke-width='2.6' stroke-linejoin='miter' stroke-miterlimit='4'/%3E%3Cpath d='M17.6 11.2H22.6L20.2 14.9C22.9 14.9 24 16.5 24 18.3 24 20.4 22.6 21.6 20.6 21.6 19.4 21.6 18.5 21.2 17.9 20.5' fill='none' stroke='%23111114' stroke-width='2.3'/%3E%3Ccircle cx='27' cy='21' r='1.6' fill='%232a2aff'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200..800&family=Inter:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200..800&family=Inter:wght@400;500;600&family=Unbounded:wght@400..900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles/style.css">
     <script>
         // 導入アニメーションの準備。script.js が 4 秒以内に始まらなければ導入をやめて本文を出す
@@ -39,7 +39,7 @@
     <header class="site-header" data-part="links" data-chrome>
         <a class="logo" href="#top" data-go="top">WSWS.WORKS</a>
         <nav class="nav" aria-label="メインナビゲーション">
-            <a href="#work-nagai" data-go="work-nagai" data-nav="work">作品</a>
+            <a href="#works" data-go="works">プロダクト</a>
             <a href="#bots" data-go="bots">ボット</a>
             <a href="#about" data-go="about">経歴</a>
             <a href="#sns" data-go="sns">SNS</a>
@@ -47,51 +47,123 @@
     </header>
 
     <!--
-        画面は上下左右につながる(data-x, data-y が位置)。
-                      SNS(0,-1)
-        経歴(-1,0)  トップ(0,0)  長い言葉(1,0)  本棚(2,0)  ロンバーグ(3,0)
-                      ボット(0,1)
+        トップのテレビが目次。番組表でチャンネルを選ぶと、その画面に入る。
+          トップ ─┬ プロダクト ─┬ 長い言葉のデータベース
+                  │              ├ WSWS'S BOOKSHELF.
+                  │              └ ロンバーグ積分計算ツール
+                  ├ ボット
+                  ├ 経歴
+                  └ SNS
+        data-parent は、もどる先の画面。同じ data-parent のプロダクトどうしは前後に移れる。
         JavaScript が動かないときは、上から順に並ぶふつうのページになる。
         data-part を付けた要素は、切り替えのときに W と S の文字で形をなぞってから現れる。
     -->
     <main id="main" class="world">
-        <section class="screen screen--top" id="top" data-x="0" data-y="0" data-name="トップ" aria-label="トップ">
-            <!-- ここに一文を入れるかは検討中 -->
-            <div class="stack" aria-label="作品の一覧">
-                <div class="stack-item" data-part="card" style="--left:30%;--top:36%;--rot:-3deg;--depth:.6;--phase:-2.2s;--z:1">
-                    <div class="stack-par">
-                        <a class="stack-card" href="#work-bookshelf" data-go="work-bookshelf">
-                            <img src="images/works/bookshelf-hero.jpg" alt="" width="1280" height="800" decoding="async">
-                            <span class="stack-label">WSWS'S BOOKSHELF.</span>
-                        </a>
+        <section class="screen screen--top" id="top" data-name="トップ" aria-label="トップ">
+            <!--
+                テレビ。番組表のチャンネルを選ぶと、その画面へ入る(パソコンでは、番組表にカーソルを合わせると試し見になる)。
+                チャンネルを足すときは、番組表(.tv-list)に <li> を、画面(.tv-content)に .tv-prog を、同じ data-ch で足す。
+                つまみの目盛りはチャンネルの数だけ並ぶ(6 より少ないときは 6)。番組のない番号は砂嵐になる。
+                右の小さな画面の絵(ASCII アート)は script.js の MINI_ART に、行き先の画面の id で足す。
+            -->
+            <div class="tv-set">
+                <div class="tv" data-part="box">
+                    <div class="tv-body">
+                        <div class="tv-screen-frame">
+                            <button type="button" class="tv-screen" aria-label="プロダクトの画面へ" data-tv-screen>
+                                <span class="tv-content">
+                                    <span class="tv-prog" data-ch="1" data-reel>
+                                        <img class="is-on" src="images/works/nagai-v3-home.jpg" alt="" data-title="長い言葉のデータベース" width="1280" height="800" decoding="async">
+                                        <img src="images/works/bookshelf-hero.jpg" alt="" data-title="WSWS'S BOOKSHELF." width="1280" height="800" decoding="async">
+                                        <img src="images/works/romberg-graph.jpg" alt="" data-title="ロンバーグ積分計算ツール" width="1280" height="800" decoding="async">
+                                        <span class="tv-cap"><b>プロダクト</b><span data-reel-title>長い言葉のデータベース</span></span>
+                                    </span>
+                                    <span class="tv-prog tv-prog--text" data-ch="2" hidden>
+                                        <span class="tv-big" data-bot-word>寿限無寿限無五劫の擦り切れ</span>
+                                        <span class="tv-small" data-bot-yomi>ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
+                                        <span class="tv-cap"><b>ボット</b><span>長い言葉bot</span></span>
+                                    </span>
+                                    <span class="tv-prog tv-prog--text" data-ch="3" hidden>
+                                        <span class="tv-big">わそわそ</span>
+                                        <span class="tv-row"><b>現在</b><span>ウェブサイト・ウェブアプリ・bot を開発</span></span>
+                                        <span class="tv-row"><b><i class="tv-bar" style="--w:3.2em"></i></b><span><i class="tv-bar" style="--w:5em"></i>大学で自然言語処理を専攻</span></span>
+                                        <span class="tv-cap"><b>経歴</b></span>
+                                    </span>
+                                    <span class="tv-prog tv-prog--text" data-ch="4" hidden>
+                                        <span class="tv-row"><b>GitHub</b><span>@wscalm</span></span>
+                                        <span class="tv-row"><b>X</b><span>準備中</span></span>
+                                        <span class="tv-row"><b>Bluesky</b><span>準備中</span></span>
+                                        <span class="tv-row"><b>メール</b><span>準備中</span></span>
+                                        <span class="tv-cap"><b>SNS</b></span>
+                                    </span>
+                                </span>
+                                <canvas class="tv-static" aria-hidden="true"></canvas>
+                                <span class="tv-scan" aria-hidden="true"></span>
+                                <span class="tv-osd" aria-hidden="true"></span>
+                                <span class="tv-power-line" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                        <div class="tv-side">
+                            <span class="tv-brand" aria-hidden="true">WSWS.WORKS</span>
+                            <div class="tv-dial">
+                                <button type="button" class="tv-knob" aria-label="チャンネルを回す"><span></span></button>
+                            </div>
+                            <div class="tv-grille" aria-hidden="true"><span></span></div>
+                            <span class="tv-mini is-dark" aria-hidden="true"><span class="tv-mini-screen"><span class="tv-mini-art"></span></span></span>
+                        </div>
                     </div>
+                    <div class="tv-legs" aria-hidden="true"><span class="tv-leg is-back"><b class="tv-leg-rod"></b></span><span class="tv-leg is-back is-right"><b class="tv-leg-rod"></b></span><span class="tv-leg"><b class="tv-leg-rod"></b></span><span class="tv-leg is-right"><b class="tv-leg-rod"></b></span></div>
                 </div>
-                <div class="stack-item" data-part="card" style="--left:72%;--top:34%;--rot:2.5deg;--depth:.8;--phase:-4.1s;--z:2">
-                    <div class="stack-par">
-                        <a class="stack-card" href="#work-romberg" data-go="work-romberg">
-                            <img src="images/works/romberg-graph.jpg" alt="" width="1280" height="800" decoding="async">
-                            <span class="stack-label">ロンバーグ積分計算ツール</span>
-                        </a>
-                    </div>
-                </div>
-                <div class="stack-item" data-part="card" style="--left:50%;--top:60%;--rot:-1deg;--depth:1;--phase:0s;--z:3">
-                    <div class="stack-par">
-                        <a class="stack-card" href="#work-nagai" data-go="work-nagai">
-                            <img src="images/works/nagai-v3-home.jpg" alt="" width="1280" height="800" decoding="async">
-                            <span class="stack-label">長い言葉のデータベース</span>
-                        </a>
-                    </div>
+
+                <div class="tv-guide">
+                    <h2 class="tv-guide-title" data-part="text">番組表</h2>
+                    <ol class="tv-list" data-part="links">
+                        <li><a href="#works" data-ch="1"><span class="tv-list-n">1</span><span class="tv-list-name">プロダクト</span></a></li>
+                        <li><a href="#bots" data-ch="2"><span class="tv-list-n">2</span><span class="tv-list-name">ボット</span></a></li>
+                        <li><a href="#about" data-ch="3"><span class="tv-list-n">3</span><span class="tv-list-name">経歴</span></a></li>
+                        <li><a href="#sns" data-ch="4"><span class="tv-list-n">4</span><span class="tv-list-name">SNS</span></a></li>
+                    </ol>
+                    <p class="tv-hint" data-part="text"><span class="tv-hint-fine">番組表にカーソルを合わせると試し見。つまみ・ホイール・矢印キーでもチャンネルが変わります</span><span class="tv-hint-touch">テレビの画面を左右にスワイプすると、チャンネルが変わります</span></p>
                 </div>
             </div>
 
             <h1 class="hero-mark" data-mark>WSWS.WORKS</h1>
         </section>
 
+        <section class="screen screen--works" id="works" data-name="プロダクト" data-parent="top" aria-labelledby="title-works">
+            <div class="panel panel--products">
+                <h2 class="screen-title" id="title-works" data-part="text">プロダクト</h2>
+                <ul class="products">
+                    <li>
+                        <a class="product" href="#work-nagai" data-go="work-nagai">
+                            <span class="product-img" data-part="box"><img src="images/works/nagai-v3-home.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
+                            <span class="product-name" data-part="text">長い言葉のデータベース</span>
+                            <span class="product-desc" data-part="text">日本語の長い単語を集めて公開しているデータベース</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="product" href="#work-bookshelf" data-go="work-bookshelf">
+                            <span class="product-img" data-part="box"><img src="images/works/bookshelf-hero.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
+                            <span class="product-name" data-part="text">WSWS'S BOOKSHELF.</span>
+                            <span class="product-desc" data-part="text">読んだ本の記録</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="product" href="#work-romberg" data-go="work-romberg">
+                            <span class="product-img" data-part="box"><img src="images/works/romberg-graph.jpg" alt="" width="1280" height="800" loading="lazy" decoding="async"></span>
+                            <span class="product-name" data-part="text">ロンバーグ積分計算ツール</span>
+                            <span class="product-desc" data-part="text">定積分を近似して、分割数ごとの誤差を比べるツール</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
         <!--
             作品の画像はすべて公開中のサイトのスクリーンショット(images/works/、1280x800)。
             長い言葉のデータベースは v1〜v3 の3世代。v1/v2 は非公開のためリンクなし。
         -->
-        <section class="screen screen--work" id="work-nagai" data-x="1" data-y="0" data-name="長い言葉のデータベース" aria-labelledby="title-nagai">
+        <section class="screen screen--work" id="work-nagai" data-parent="works" data-name="長い言葉のデータベース" aria-labelledby="title-nagai">
             <div class="work-media">
                 <div class="gen-panel" role="tabpanel" id="panel-v1" aria-labelledby="tab-v1" hidden>
                     <div class="gallery" data-gallery>
@@ -156,7 +228,7 @@
             </div>
         </section>
 
-        <section class="screen screen--work" id="work-bookshelf" data-x="2" data-y="0" data-name="WSWS'S BOOKSHELF." aria-labelledby="title-bookshelf">
+        <section class="screen screen--work" id="work-bookshelf" data-parent="works" data-name="WSWS'S BOOKSHELF." aria-labelledby="title-bookshelf">
             <div class="work-media">
                 <div class="gallery" data-gallery>
                     <div class="media" data-part="box">
@@ -180,7 +252,7 @@
             </div>
         </section>
 
-        <section class="screen screen--work" id="work-romberg" data-x="3" data-y="0" data-name="ロンバーグ積分計算ツール" aria-labelledby="title-romberg">
+        <section class="screen screen--work" id="work-romberg" data-parent="works" data-name="ロンバーグ積分計算ツール" aria-labelledby="title-romberg">
             <div class="work-media">
                 <div class="gallery" data-gallery>
                     <div class="media" data-part="box">
@@ -207,7 +279,7 @@
             経歴。伏せたい所は .redact にする(黒い帯になり、中身は W と S の飾り。本当の文字は書かない)。
             行を足すときは .career に <div><dt>…</dt><dd>…</dd></div> を追加する。
         -->
-        <section class="screen screen--about" id="about" data-x="-1" data-y="0" data-name="経歴" aria-labelledby="title-about">
+        <section class="screen screen--about" id="about" data-parent="top" data-name="経歴" aria-labelledby="title-about">
             <div class="panel">
                 <h2 class="screen-title" id="title-about" data-part="text">経歴</h2>
                 <p class="about-name" data-part="text">わそわそ</p>
@@ -225,7 +297,7 @@
         </section>
 
         <!-- SNS と連絡先。決まったら .is-pending を <a> に置き換える -->
-        <section class="screen screen--sns" id="sns" data-x="0" data-y="-1" data-name="SNS" aria-labelledby="title-sns">
+        <section class="screen screen--sns" id="sns" data-parent="top" data-name="SNS" aria-labelledby="title-sns">
             <div class="panel">
                 <h2 class="screen-title" id="title-sns" data-part="text">SNS</h2>
                 <ul class="link-list">
@@ -238,7 +310,7 @@
             </div>
         </section>
 
-        <section class="screen screen--bots" id="bots" data-x="0" data-y="1" data-name="ボット" aria-labelledby="title-bots">
+        <section class="screen screen--bots" id="bots" data-parent="top" data-name="ボット" aria-labelledby="title-bots">
             <div class="panel panel--wide">
                 <h2 class="screen-title" id="title-bots" data-part="text">ボット</h2>
                 <div class="bot">
@@ -253,8 +325,8 @@
                     <!-- Bluesky の公開 API から最新の投稿を読んで差し替える。読めなければ投稿の例のまま -->
                     <a class="post" href="https://bsky.app/profile/nagai-kotoba-bot.bsky.social" target="_blank" rel="noopener noreferrer" data-part="box" data-bot-feed>
                         <span class="post-head">投稿の例</span>
-                        <span class="post-word">寿限無寿限無五劫の擦り切れ</span>
-                        <span class="post-yomi">ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
+                        <span class="post-word" data-bot-word>寿限無寿限無五劫の擦り切れ</span>
+                        <span class="post-yomi" data-bot-yomi>ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
                         <span class="post-meta">長い言葉bot</span>
                     </a>
                 </div>
@@ -262,13 +334,11 @@
         </section>
     </main>
 
-    <!-- となりの画面への案内と、いまの位置を示す小さな地図。JavaScript が組み立てる -->
-    <nav class="compass" aria-label="となりの画面" data-chrome>
-        <button class="compass-btn" type="button" data-dir="up" data-part="text" hidden><svg class="compass-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="compass-label"></span></button>
-        <button class="compass-btn" type="button" data-dir="right" data-part="text" hidden><svg class="compass-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="compass-label"></span></button>
-        <button class="compass-btn" type="button" data-dir="down" data-part="text" hidden><svg class="compass-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="compass-label"></span></button>
-        <button class="compass-btn" type="button" data-dir="left" data-part="text" hidden><svg class="compass-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="compass-label"></span></button>
-        <div class="minimap" aria-hidden="true" data-part="box"></div>
+    <!-- もどる先と、となりのプロダクトへの案内。JavaScript がいまの画面に合わせて組み立てる -->
+    <nav class="dock" aria-label="画面の移動" data-chrome>
+        <button class="dock-btn" type="button" data-dock="back" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
+        <button class="dock-btn" type="button" data-dock="prev" data-dir="-1" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
+        <button class="dock-btn" type="button" data-dock="next" data-dir="1" data-part="text" hidden><svg class="dock-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span class="dock-label"></span></button>
     </nav>
 
     <script src="./script/script.js" defer></script>

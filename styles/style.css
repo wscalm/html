@@ -1,7 +1,7 @@
 /* ==========================================================================
    WSWS.WORKS
-   白地に黒。画面は 1 枚ずつ上下左右につながり、移るときは小さな W と S が
-   次の画面の形をつくってから本物に切り替わる。
+   白地に黒。トップのテレビが目次で、チャンネルを選ぶとその画面に入る。
+   画面を移るときは、小さな W と S が次の画面の形をつくってから本物に切り替わる。
    ========================================================================== */
 
 :root {
@@ -14,6 +14,7 @@
 
     --f-sans: 'Inter', 'Zen Kaku Gothic New', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
     --f-mark: 'Inter Tight', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --f-logo: 'Unbounded', 'Inter Tight', 'Helvetica Neue', Arial, sans-serif; /* ロゴ(WSWS.WORKS)だけの書体 */
 
     --header-h: 68px;
     --gutter: clamp(20px, 4vw, 64px);
@@ -184,9 +185,7 @@ button {
 
 /* 導入のあいだは、ヘッダーや案内も導入の下に置く(切り替えのときは上に残す) */
 .is-intro .site-header,
-.is-intro .compass,
-.is-intro .compass-btn,
-.is-intro .minimap {
+.is-intro .dock-btn {
     z-index: 900;
 }
 
@@ -233,10 +232,11 @@ button {
 }
 
 .logo {
-    font-family: var(--f-mark);
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: .01em;
+    font-family: var(--f-logo);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: .02em;
+    font-synthesis: none;
 }
 
 .nav {
@@ -331,86 +331,659 @@ button {
     overflow: hidden;
 }
 
-.stack {
-    position: relative;
-    min-height: 320px;
+/* テレビ。--tw(テレビの幅)を基準に、各部の大きさを決める */
+.tv-set {
+    align-self: center;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: clamp(32px, 5vw, 80px);
     margin-bottom: 3vh;
 }
 
-.stack-item {
-    position: absolute;
-    left: var(--left);
-    top: var(--top);
-    z-index: var(--z, 1);
-    width: min(27vw, 420px);
-    transform: translate(-50%, -50%);
+.tv {
+    --tw: min(660px, 52vw, calc((100svh - var(--header-h) - 8.2vw - 150px) / .7));
+    width: var(--tw);
 }
 
-.stack-item:hover {
-    z-index: 5;
+/* 光は左上から。筐体は左上が明るく右下へ少し沈み、縁に光が当たり、右下に影を落とす */
+.tv-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    gap: calc(var(--tw) * .03);
+    padding: calc(var(--tw) * .035);
+    background:
+        radial-gradient(70% 60% at 8% 0%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 70%),
+        linear-gradient(112deg, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, .75) 67%, rgba(255, 255, 255, .15) 73%, rgba(255, 255, 255, 0) 82%),
+        linear-gradient(165deg, #efeeea, #e7e5e0 55%, #dbd9d3);
+    border: 1px solid #d6d4ce;
+    border-radius: calc(var(--tw) * .045);
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, .95),
+        inset 0 calc(var(--tw) * .012) calc(var(--tw) * .016) calc(var(--tw) * -.004) rgba(255, 255, 255, .85),
+        inset 0 calc(var(--tw) * -.014) calc(var(--tw) * .02) calc(var(--tw) * -.004) rgba(60, 45, 25, .08),
+        inset 2px 0 0 rgba(255, 255, 255, .6),
+        inset -2px 0 0 rgba(60, 45, 25, .04),
+        inset 0 -6px 0 rgba(60, 45, 25, .05),
+        calc(var(--tw) * .006) calc(var(--tw) * .008) calc(var(--tw) * .012) rgba(60, 45, 25, .1),
+        calc(var(--tw) * .028) calc(var(--tw) * .04) calc(var(--tw) * .06) rgba(60, 45, 25, .16);
 }
 
-.stack-par {
-    will-change: transform;
+.tv-screen-frame {
+    flex: 1;
+    min-width: 0;
+    padding: calc(var(--tw) * .022);
+    background: linear-gradient(150deg, #393939, #2a2a2a 40%, #222);
+    border-radius: calc(var(--tw) * .05);
+    box-shadow:
+        inset calc(var(--tw) * .004) calc(var(--tw) * .006) calc(var(--tw) * .01) rgba(0, 0, 0, .55),
+        inset -1px -1px 0 rgba(255, 255, 255, .08),
+        1px 1px 0 rgba(255, 255, 255, .9),
+        -1px -1px 0 rgba(60, 45, 25, .12);
 }
 
-.stack-card {
+.tv-screen {
+    position: relative;
     display: block;
-    rotate: var(--rot);
-    animation: sway 7s ease-in-out var(--phase, 0s) infinite;
-    transition: scale .6s var(--ease-out);
-}
-
-.stack-card img {
     width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
-    border-radius: var(--radius);
-    background: var(--panel);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #0d0d0d;
+    border-radius: calc(var(--tw) * .045) / calc(var(--tw) * .055);
+    color: #f2f2f2;
+    text-align: left;
+    letter-spacing: .02em;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-y;
+}
+
+/* ブラウン管のふくらみと、ガラスの映りこみ */
+.tv-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border-radius: inherit;
+    pointer-events: none;
     box-shadow:
-        0 0 0 1px rgba(0, 0, 0, .06),
-        0 2px 4px rgba(0, 0, 0, .04),
-        0 28px 56px -18px rgba(0, 0, 0, .24);
-    transition: box-shadow .6s var(--ease-out);
+        inset calc(var(--tw) * .006) calc(var(--tw) * .009) calc(var(--tw) * .016) rgba(0, 0, 0, .55),
+        inset 0 0 calc(var(--tw) * .06) rgba(0, 0, 0, .85);
+    background:
+        linear-gradient(158deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .06) 26%, rgba(255, 255, 255, 0) 26.5%),
+        radial-gradient(120% 90% at 28% 12%, rgba(255, 255, 255, .09), transparent 42%);
 }
 
-.stack-card:hover {
-    scale: 1.04;
-}
-
-.stack-card:hover img {
-    box-shadow:
-        0 0 0 1px rgba(0, 0, 0, .08),
-        0 4px 8px rgba(0, 0, 0, .05),
-        0 40px 70px -20px rgba(0, 0, 0, .3);
-}
-
-.stack-label {
+.tv-content,
+.tv-prog {
+    position: absolute;
+    inset: 0;
     display: block;
-    margin-top: 12px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--sub);
-    opacity: 0;
-    translate: 0 -4px;
-    transition: opacity .35s, translate .5s var(--ease-out);
 }
 
-.stack-card:hover .stack-label,
-.stack-card:focus-visible .stack-label {
+.tv-prog img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: cover;
+    object-position: top;
+    filter: saturate(.7) contrast(1.05);
+    opacity: 0;
+}
+
+/* visibility を子で戻すと、電源が切れているときにも見えてしまうので opacity で切り替える */
+.tv-prog img.is-on {
+    opacity: 1;
+}
+
+.tv-prog--text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 9% 8%;
+}
+
+.tv-cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 1em;
+    padding: calc(var(--tw) * .014) calc(var(--tw) * .03);
+    background: rgba(0, 0, 0, .66);
+    color: #fff;
+    font-size: max(10px, calc(var(--tw) * .021));
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.tv-cap b {
+    flex: none;
+    font-weight: 700;
+}
+
+/* 狭いテレビでは、番組名の後ろを … で切る */
+.tv-cap span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tv-big {
+    font-size: max(18px, calc(var(--tw) * .05));
+    font-weight: 700;
+    line-height: 1.35;
+    font-feature-settings: 'palt';
+    overflow-wrap: anywhere;
+}
+
+.tv-small {
+    margin-top: calc(var(--tw) * .012);
+    font-size: max(10px, calc(var(--tw) * .019));
+    color: #a9a9a9;
+}
+
+.tv-row {
+    display: flex;
+    gap: 1.2em;
+    font-size: max(11px, calc(var(--tw) * .023));
+    line-height: 2.1;
+}
+
+.tv-row b {
+    flex: none;
+    width: 5.5em;
+    font-weight: 500;
+    color: #a9a9a9;
+}
+
+.tv-bar {
+    display: inline-block;
+    width: var(--w);
+    height: .9em;
+    margin-right: .4em;
+    vertical-align: -.1em;
+    background: #e9e9e9;
+}
+
+.tv-static {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.tv-scan {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px);
+}
+
+.tv-osd {
+    position: absolute;
+    top: 7%;
+    right: 8%;
+    z-index: 4;
+    font: 600 calc(var(--tw) * .065) / 1 var(--f-mark);
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 255, 255, .55);
+    opacity: 0;
+}
+
+.tv-osd.is-on {
+    opacity: 1;
+}
+
+.tv-osd small {
+    display: block;
+    margin-top: .5em;
+    font: 500 max(11px, calc(var(--tw) * .02)) / 1.4 var(--f-sans);
+    text-align: right;
+}
+
+.tv-power-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    z-index: 6;
+    height: 2px;
+    margin-top: -1px;
+    background: #fff;
+    box-shadow: 0 0 14px #fff;
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.tv-screen.is-off .tv-content,
+.tv-screen.is-off .tv-osd {
+    visibility: hidden;
+}
+
+.tv-screen.is-powering .tv-power-line {
+    animation: power .6s ease-out forwards;
+}
+
+.tv-screen.is-tuning .tv-content {
+    animation: roll .3s steps(1);
+}
+
+.tv-side {
+    flex: none;
+    width: calc(var(--tw) * .2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--tw) * .025);
+    padding-top: calc(var(--tw) * .012);
+}
+
+.tv-brand {
+    font: 700 calc(var(--tw) * .0165) / 1 var(--f-logo);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    color: #8b8984;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, .9);
+}
+
+.tv-dial {
+    --ki: 22%;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+}
+
+.tv-dial::before,
+.tv-dial::after {
+    content: '';
+    position: absolute;
+    inset: var(--ki);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.tv-dial::before {
+    box-shadow:
+        calc(var(--tw) * .003) calc(var(--tw) * .004) calc(var(--tw) * .005) rgba(50, 35, 15, .22),
+        calc(var(--tw) * .012) calc(var(--tw) * .016) calc(var(--tw) * .022) rgba(50, 35, 15, .26);
+}
+
+.tv-dial::after {
+    background:
+        radial-gradient(circle at 32% 26%, rgba(255, 255, 255, .8), rgba(255, 255, 255, 0) 40%),
+        radial-gradient(circle at 74% 80%, rgba(60, 45, 25, .16), rgba(60, 45, 25, 0) 52%);
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .8), inset -1px -1px 1px rgba(60, 45, 25, .12);
+}
+
+.tv-num {
+    position: absolute;
+    min-width: 2em;
+    padding: 4px;
+    transform: translate(-50%, -50%);
+    font: 600 max(10px, calc(var(--tw) * .019)) / 1 var(--f-mark);
+    color: #6e6c68;
+}
+
+.tv-num.is-empty {
+    color: #bdbbb6;
+}
+
+.tv-num[aria-current="true"] {
+    color: var(--ink);
+}
+
+.tv-knob {
+    position: absolute;
+    inset: var(--ki);
+    border-radius: 50%;
+    background: repeating-conic-gradient(#e6e4df 0 6deg, #d5d3ce 6deg 12deg);
+    box-shadow: inset 0 0 0 calc(var(--tw) * .014) #ebe9e4;
+    transition: transform .22s cubic-bezier(.3, 1.6, .5, 1);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tv-knob span {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    width: 3px;
+    height: 32%;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #222;
+}
+
+/* 小さな画面: チャンネルごとの絵を文字(ASCII アート)で映す。縁は大きな画面と同じつくり */
+.tv-mini {
+    position: relative;
+    flex: none;
+    width: 86%;
+    aspect-ratio: 1;
+    border-radius: calc(var(--tw) * .018);
+    background: linear-gradient(150deg, #393939, #2a2a2a 40%, #222);
+    box-shadow:
+        inset calc(var(--tw) * .002) calc(var(--tw) * .003) calc(var(--tw) * .006) rgba(0, 0, 0, .55),
+        inset -1px -1px 0 rgba(255, 255, 255, .08),
+        1px 1px 0 rgba(255, 255, 255, .9),
+        -1px -1px 0 rgba(60, 45, 25, .12);
+}
+
+.tv-mini-screen {
+    position: absolute;
+    inset: calc(var(--tw) * .008);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: calc(var(--tw) * .011);
+    background: radial-gradient(110% 110% at 35% 30%, #1a1a1a, #090909 75%);
+}
+
+/* 走査線と、ガラスの映りこみ */
+.tv-mini-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        linear-gradient(158deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, .04) 30%, rgba(255, 255, 255, 0) 30.5%),
+        repeating-linear-gradient(180deg, rgba(0, 0, 0, .28) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+    box-shadow: inset 0 0 calc(var(--tw) * .016) rgba(0, 0, 0, .9);
+}
+
+.tv-mini-art {
+    font: 600 max(5px, calc(var(--tw) * .0148)) / 1.12 ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    letter-spacing: 0;
+    white-space: pre;
+    color: #ececec;
+    text-shadow: 0 0 calc(var(--tw) * .006) rgba(255, 255, 255, .45);
+}
+
+.tv-mini.is-dark .tv-mini-art,
+.tv-mini.is-dark .tv-mini-3d {
+    visibility: hidden;
+}
+
+/* 細かい文字で描く 3D の絵(プロダクトの立方体・ボットの頭)。画面いっぱいの正方形 */
+.tv-mini-3d {
+    position: absolute;
+    inset: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 calc(var(--tw) * .003) rgba(255, 255, 255, .45));
+}
+
+.tv-mini.is-3d .tv-mini-3d {
+    display: block;
+}
+
+.tv-mini.is-3d .tv-mini-art {
+    display: none;
+}
+
+/* スピーカーの網目も W と S */
+.tv-grille {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+    font: 600 calc(var(--tw) * .015) / 1.3 var(--f-logo);
+    letter-spacing: .1em;
+    color: #c8c6c0;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, .85);
+    text-align: center;
+    word-break: break-all;
+    user-select: none;
+}
+
+/* 行の途中で切れないよう、ちょうど 3 行ぶんだけ見せる */
+.tv-grille span {
+    width: 100%;
+    max-height: calc(var(--tw) * .015 * 1.3 * 3);
+    overflow: hidden;
+}
+
+/* 脚: 筐体と同じ白い樹脂。筐体の下面の、前の縁より少し奥から生えていて、先細りの脚が外へ少し開いて伸びる。
+   上の端は筐体の陰に隠れる(筐体がいちばん手前)。テレビは奥へほんの少し上る床に立っていて、
+   奥の 2 本は先だけが、手前の脚の少し内側・少し上に、陰になって見える。
+   --hide: 筐体に隠れる長さ。脚の箱は筐体の下の縁より上から始まる */
+.tv-legs {
+    position: relative;
+    z-index: 0;
+    height: calc(var(--tw) * .12);
+    margin-top: calc(var(--tw) * -.05);
+}
+
+.tv-legs::before {
+    content: '';
+    position: absolute;
+    left: 6%;
+    right: -6%;
+    bottom: calc(var(--tw) * -.014);
+    height: calc(var(--tw) * .06);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(60, 45, 25, .2), rgba(60, 45, 25, .08) 60%, rgba(60, 45, 25, 0));
+}
+
+.tv-leg {
+    --splay: 8deg;
+    --hide: calc(var(--tw) * .03);
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    left: 12%;
+    width: calc(var(--tw) * .056);
+}
+
+.tv-leg.is-right {
+    --splay: -8deg;
+    left: auto;
+    right: 12%;
+}
+
+.tv-leg.is-back {
+    --hide: calc(var(--tw) * .05);
+    z-index: 0;
+    left: 18%;
+}
+
+.tv-leg.is-back.is-right {
+    left: auto;
+    right: 18%;
+}
+
+.tv-leg-rod {
+    position: absolute;
+    top: calc(var(--tw) * .02);
+    left: 50%;
+    width: calc(var(--tw) * .03);
+    height: calc(var(--tw) * .1);
+    margin-left: calc(var(--tw) * -.015);
+    transform: rotate(var(--splay));
+    transform-origin: 50% 0;
+}
+
+/* 奥の脚: ほとんど筐体に隠れ、先だけが見える。足先は手前の脚より少し高い所にある。筐体の陰で暗い */
+.tv-leg.is-back .tv-leg-rod {
+    top: 0;
+    height: calc(var(--tw) * .088);
+    transform: rotate(var(--splay)) scaleX(.88);
+    filter: brightness(.84);
+}
+
+/* 左から光が当たる丸い棒。先へ細くなる。筐体の下から出たところは筐体の陰で暗い */
+.tv-leg-rod::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 calc(var(--tw) * .012);
+    clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
+    background:
+        linear-gradient(180deg, rgba(60, 45, 25, .3) var(--hide), rgba(60, 45, 25, 0) calc(var(--hide) + var(--tw) * .03)),
+        linear-gradient(90deg, #fbfaf7, #eeece8 30%, #dcd9d2 66%, #c8c4bc 92%, #d2cec6);
+}
+
+/* 足先: 同じ樹脂で少し濃い先、床に触れるところの影 */
+.tv-leg-rod::after {
+    content: '';
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    bottom: 0;
+    height: calc(var(--tw) * .013);
+    border-radius: 1px 1px calc(var(--tw) * .006) calc(var(--tw) * .006);
+    background: linear-gradient(90deg, #e3e0d9, #cdc9c1 40%, #b3afa6 85%);
+    box-shadow: 0 2px 2px -1px rgba(40, 30, 10, .35);
+}
+
+/* 導入でテレビを文字から組み立てるあいだは、ふつうのちらつきを止める(組み上がるまでは隠す) */
+.tv.is-assembling,
+.tv.is-assembled {
+    animation: none !important;
+    opacity: 1 !important;
+}
+
+.tv.is-assembling {
+    visibility: hidden;
+}
+
+.tv-assemble {
+    position: fixed;
+    inset: 0;
+    z-index: 950;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* 選んだ番組が、テレビの枠から全面へ広がる */
+.tv-zoom {
+    position: fixed;
+    z-index: 990;
+    overflow: hidden;
+    background: #0d0d0d;
+    color: #f2f2f2;
+    pointer-events: none;
+}
+
+.tv-prog[hidden] {
+    display: none;
+}
+
+/* 番組表 */
+.tv-guide {
+    width: 240px;
+}
+
+.tv-list {
+    list-style: none;
+}
+
+.tv-guide-title {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.tv-list a {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    min-height: 46px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    color: var(--sub);
+    transition: color .2s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.tv-list-n {
+    width: 1em;
+    font: 600 13px var(--f-mark);
+    color: var(--faint);
+}
+
+.tv-list-name {
+    flex: 1;
+}
+
+.tv-list a::after {
+    content: '→';
+    color: var(--faint);
+    opacity: 0;
+    translate: -4px 0;
+    transition: opacity .2s, translate .35s var(--ease-out);
+}
+
+.tv-list a[aria-current="true"],
+.tv-list a:hover {
+    color: var(--ink);
+}
+
+.tv-list a[aria-current="true"] {
+    font-weight: 700;
+}
+
+.tv-list a[aria-current="true"] .tv-list-n {
+    color: var(--ink);
+}
+
+.tv-list a[aria-current="true"]::after {
     opacity: 1;
     translate: 0 0;
+}
+
+.tv-hint {
+    margin-top: 14px;
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--faint);
+}
+
+.tv-hint-touch {
+    display: none;
+}
+
+/* タッチの端末(カーソルがない)では、試し見の代わりにスワイプを案内し、選んだ行に → を常に出す */
+@media (hover: none), (pointer: coarse) {
+    .tv-hint-fine {
+        display: none;
+    }
+
+    .tv-hint-touch {
+        display: inline;
+    }
+
+    .tv-list a::after {
+        opacity: 1;
+        translate: 0 0;
+    }
 }
 
 .hero-mark {
     position: relative;
     z-index: 6;
-    font-family: var(--f-mark);
+    font-family: var(--f-logo);
     font-weight: 700;
-    font-size: 13.6vw;
-    line-height: .78;
-    letter-spacing: -.045em;
+    font-synthesis: none;
+    font-size: 10vw;
+    line-height: .82;
+    letter-spacing: 0;
     white-space: nowrap;
     min-width: 0;
     user-select: none;
@@ -418,6 +991,87 @@ button {
 
 .hero-mark .ch {
     display: inline-block;
+}
+
+/* 導入の締め(W が 3 つに分かれる)の間は、文字の動きを script に任せる */
+.hero-mark.is-sequence .ch {
+    animation: none;
+}
+
+/* 分かれて飛ぶ W の残像 */
+.hero-mark .ghost {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+}
+
+/* ==========================================================================
+   プロダクト一覧
+   ========================================================================== */
+
+.panel--products {
+    width: min(1180px, 100%);
+}
+
+.products {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(24px, 3vw, 44px);
+}
+
+.product {
+    display: block;
+}
+
+.product-img {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: var(--panel);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 24px 48px -24px rgba(0, 0, 0, .18);
+    transition: translate .5s var(--ease-out), box-shadow .5s var(--ease-out);
+}
+
+.product-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+}
+
+.product-name {
+    display: block;
+    margin-top: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.6;
+    font-feature-settings: 'palt';
+}
+
+.product-name::after {
+    content: ' →';
+    color: var(--faint);
+    transition: color .2s;
+}
+
+.product-desc {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--sub);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .product:hover .product-img {
+        translate: 0 -4px;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, .08), 0 34px 60px -26px rgba(0, 0, 0, .26);
+    }
+
+    .product:hover .product-name::after {
+        color: var(--ink);
+    }
 }
 
 /* ==========================================================================
@@ -737,18 +1391,22 @@ button {
 }
 
 /* ==========================================================================
-   となりの画面への案内と、小さな地図
+   もどる先と、となりのプロダクトへの案内
    ========================================================================== */
 
-.compass {
+.dock {
     display: none;
 }
 
-.is-world .compass {
+.is-world .dock {
     display: block;
 }
 
-.compass-btn {
+.is-world .dock.is-empty {
+    display: none;
+}
+
+.dock-btn {
     position: fixed;
     z-index: var(--chrome-z);
     display: flex;
@@ -761,107 +1419,63 @@ button {
     transition: color .25s;
 }
 
-.compass-btn:hover {
+.dock-btn:hover {
     color: var(--ink);
 }
 
-.compass-btn[hidden] {
+.dock-btn[hidden] {
     display: none;
 }
 
-.compass-arrow {
+.dock-arrow {
     flex: none;
     width: 14px;
     height: 14px;
+    rotate: -90deg;
     transition: transform .45s var(--ease-out);
 }
 
-.compass-btn[data-dir="up"] {
-    top: calc(var(--header-h) + 2px);
-    left: 50%;
-    transform: translateX(-50%);
+.dock-btn[data-dock="back"] {
+    left: calc(var(--gutter) - 10px);
+    bottom: 14px;
 }
 
-.compass-btn[data-dir="down"] {
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    flex-direction: row-reverse;
+.dock-btn[data-dock="back"]:hover .dock-arrow,
+.dock-btn[data-dock="prev"]:hover .dock-arrow {
+    transform: translateY(-2px);
 }
 
-.compass-btn[data-dir="down"] .compass-arrow {
-    rotate: 180deg;
-}
-
-.compass-btn[data-dir="left"],
-.compass-btn[data-dir="right"] {
+.dock-btn[data-dock="prev"],
+.dock-btn[data-dock="next"] {
     top: 50%;
     transform: translateY(-50%);
     flex-direction: column;
 }
 
-.compass-btn[data-dir="left"] {
+.dock-btn[data-dock="prev"] {
     left: 10px;
 }
 
-.compass-btn[data-dir="right"] {
+.dock-btn[data-dock="next"] {
     right: 10px;
     flex-direction: column-reverse;
 }
 
-.compass-btn[data-dir="left"] .compass-arrow {
-    rotate: -90deg;
-}
-
-.compass-btn[data-dir="right"] .compass-arrow {
+.dock-btn[data-dock="next"] .dock-arrow {
     rotate: 90deg;
 }
 
-.compass-btn[data-dir="left"] .compass-label,
-.compass-btn[data-dir="right"] .compass-label {
+.dock-btn[data-dock="next"]:hover .dock-arrow {
+    transform: translateY(-2px);
+}
+
+.dock-btn[data-dock="prev"] .dock-label,
+.dock-btn[data-dock="next"] .dock-label {
     writing-mode: vertical-rl;
     max-height: 16em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.compass-btn[data-dir="up"]:hover .compass-arrow {
-    transform: translateY(-2px);
-}
-
-.compass-btn[data-dir="down"]:hover .compass-arrow {
-    transform: translateY(2px);
-}
-
-.compass-btn[data-dir="left"]:hover .compass-arrow {
-    transform: translateY(-2px);
-}
-
-.compass-btn[data-dir="right"]:hover .compass-arrow {
-    transform: translateY(-2px);
-}
-
-.minimap {
-    position: fixed;
-    left: var(--gutter);
-    bottom: 22px;
-    z-index: var(--chrome-z);
-    display: grid;
-    gap: 3px;
-}
-
-.minimap span {
-    width: 10px;
-    height: 7px;
-    border: 1px solid #cfcfcf;
-    border-radius: 1px;
-    transition: background-color .3s, border-color .3s;
-}
-
-.minimap span.is-current {
-    background: var(--ink);
-    border-color: var(--ink);
 }
 
 /* ==========================================================================
@@ -891,9 +1505,17 @@ button {
     78%, 100% { opacity: 1; translate: 0 0; }
 }
 
-@keyframes sway {
-    0%, 100% { translate: 0 0; rotate: var(--rot); }
-    50% { translate: 0 -10px; rotate: calc(var(--rot) + .8deg); }
+@keyframes power {
+    0% { opacity: 1; transform: scaleX(0); }
+    45% { opacity: 1; transform: scaleX(1) scaleY(1); }
+    100% { opacity: 0; transform: scaleX(1) scaleY(180); }
+}
+
+@keyframes roll {
+    0% { transform: translateY(-9%); }
+    30% { transform: translateY(6%) skewX(-5deg); }
+    60% { transform: translateY(-2%); }
+    100% { transform: none; }
 }
 
 /* ==========================================================================
@@ -913,6 +1535,30 @@ button {
     .bot {
         grid-template-columns: 1fr;
     }
+
+    .products {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* 縦長の画面では、番組表をテレビの下に置く */
+@media (max-width: 900px), (max-aspect-ratio: 1 / 1) {
+    .tv-set {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 22px;
+        width: min(100%, 560px);
+    }
+
+    /* --tw は中の文字の大きさにも使うので、% ではなく画面の幅と高さから決める */
+    .tv {
+        --tw: clamp(260px, calc((100svh - var(--header-h) - 8.2vw - 380px) / .7), min(560px, calc(100vw - var(--gutter) * 2)));
+        align-self: center;
+    }
+
+    .tv-guide {
+        width: 100%;
+    }
 }
 
 @media (max-width: 760px) {
@@ -925,7 +1571,7 @@ button {
     }
 
     .logo {
-        font-size: 14px;
+        font-size: 12px;
     }
 
     .nav {
@@ -942,33 +1588,6 @@ button {
 
     .screen--top {
         padding-bottom: 76px;
-    }
-
-    .stack {
-        min-height: 300px;
-    }
-
-    .stack-item {
-        width: 62vw;
-    }
-
-    .stack-item:nth-child(1) {
-        --left: 38% !important;
-        --top: 22% !important;
-    }
-
-    .stack-item:nth-child(2) {
-        --left: 62% !important;
-        --top: 46% !important;
-    }
-
-    .stack-item:nth-child(3) {
-        --left: 44% !important;
-        --top: 74% !important;
-    }
-
-    .stack-label {
-        display: none;
     }
 
     .gallery-foot {
@@ -1004,16 +1623,38 @@ button {
         grid-template-columns: 6.5em minmax(0, 1fr) auto;
     }
 
-    /* スマホでは、となりへの案内を下の帯にまとめる */
-    .is-world .compass {
+    .products {
+        grid-template-columns: 1fr;
+    }
+
+    .screen--top {
+        padding-bottom: 40px;
+    }
+
+    .tv-set {
+        margin-bottom: 28px;
+    }
+
+    /* 指で回しやすいよう、つまみを大きく。目盛りの数字は飾りにする */
+    .tv-dial {
+        --ki: 12%;
+    }
+
+    .tv-num {
+        pointer-events: none;
+    }
+
+    /* スマホでは、もどる・前後の案内を下の帯にまとめる */
+    .is-world .dock:not(.is-empty) {
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: var(--chrome-z);
         display: grid;
-        grid-template-columns: 1fr 1fr auto 1fr 1fr;
+        grid-template-columns: 1fr auto 1fr;
         align-items: center;
+        gap: 4px;
         height: calc(56px + env(safe-area-inset-bottom));
         padding: 0 8px env(safe-area-inset-bottom);
         background: rgba(255, 255, 255, .92);
@@ -1022,48 +1663,37 @@ button {
         border-top: 1px solid var(--line);
     }
 
-    .compass-btn,
-    .compass-btn[data-dir] {
+    .dock-btn,
+    .dock-btn[data-dock] {
         position: static;
         transform: none;
-        flex-direction: column;
-        gap: 2px;
+        flex-direction: row;
+        justify-content: center;
         min-width: 0;
-        padding: 6px 2px;
-        font-size: 10px;
+        min-height: 44px;
+        padding: 6px 4px;
+        font-size: 12px;
         color: var(--sub);
     }
 
-    .compass-btn[hidden] {
+    .dock-btn[hidden] {
         display: flex;
         visibility: hidden;
     }
 
-    .compass-btn[data-dir="left"] { order: 1; }
-    .compass-btn[data-dir="up"] { order: 2; }
-    .minimap { order: 3; }
-    .compass-btn[data-dir="down"] { order: 4; flex-direction: column; }
-    .compass-btn[data-dir="right"] { order: 5; flex-direction: column; }
+    .dock-btn[data-dock="prev"] { order: 1; justify-content: flex-start; }
+    .dock-btn[data-dock="back"] { order: 2; }
+    .dock-btn[data-dock="next"] { order: 3; justify-content: flex-end; flex-direction: row-reverse; }
 
-    .compass-btn[data-dir="left"] .compass-label,
-    .compass-btn[data-dir="right"] .compass-label,
-    .compass-label {
+    .dock-btn[data-dock="prev"] .dock-label,
+    .dock-btn[data-dock="next"] .dock-label,
+    .dock-label {
         writing-mode: horizontal-tb;
         max-width: 100%;
         max-height: none;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-
-    .minimap {
-        position: static;
-        margin: 0 6px;
-    }
-
-    .minimap span {
-        width: 8px;
-        height: 6px;
     }
 }
 

@@ -35,6 +35,9 @@
     const header = $('.site-header');
     const dock = $('.dock');
 
+    // 音(script/sound.js)。読めなかったときは鳴らさない
+    const sfx = window.wsSound || { play: () => () => {}, snow: () => {} };
+
     /* ----------------------------------------------------------------------
        ロゴ: 1 文字ずつに分けて、画面幅いっぱいに合わせる
        ---------------------------------------------------------------------- */
@@ -1272,13 +1275,19 @@
                     t.classList.remove('is-typing');
                 });
             },
-            // 画面が見えたら(W と S が本物に替わったら)、端末に 1 行ずつ打ちこむ
+            // 画面が見えたら(W と S が本物に替わったら)、端末に 1 行ずつ打ちこむ。
+            // 行が出るたびにカタッ(打ちこんだ行はコツ)。間隔は CSS の .term.is-typing .tl と同じ
             type(s) {
                 if (RM) return;
                 $$('[data-term]', s.el).forEach((t) => {
                     t.classList.remove('is-typing');
                     void t.offsetWidth;
                     t.classList.add('is-typing');
+                    const list = $$('.tl:not(.is-live)', t).map((l) => [
+                        .35 + (parseFloat(l.style.getPropertyValue('--i')) || 0) * .07,
+                        !!$('.ps', l) && !l.classList.contains('term-prompt'),
+                    ]);
+                    stops.push(sfx.play('lines', list));
                 });
             },
         };
@@ -1286,7 +1295,7 @@
 
     // 背景の W と S を静かにする所: ヘッダーの文字、もどるボタン、いまの画面の data-quiet
     field.quiet(() => [
-        $('.logo', header), $('.nav', header),
+        $('.logo', header), $('.nav', header), $('.sound-toggle', header),
         ...$$('.dock-btn:not([hidden])', dock),
         ...(cur ? $$('[data-quiet]', cur.el) : []),
     ]);
@@ -1340,6 +1349,8 @@
         busy = true;
         const containers = [next.el, dock];
         next.el.classList.add('is-forming');
+        // ピリピリは、W と S が流れてくる側から(前後へは進む向き、押して入るときは押した所)
+        sfx.play('move', dir ? dir.x * .4 : origin ? ((origin.x / innerWidth) * 2 - 1) * .5 : 0);
         fx.play({
             mode: 'move', dir, origin, containers,
             swap: () => {
@@ -1507,6 +1518,7 @@
         held.forEach((el) => { el.style.opacity = '0'; });
         // ページが替わった瞬間(引っかかりやすい所)は、グリッチでごまかす
         glitch.burst(300);
+        sfx.play('glitch', 300);
         tear(z);
         // つなぐ部分に data-part をもどすのは、ちらつきの印(is-revealing)が外れてから(先にもどすと、もう一度ちらつく)
         let revealEnd = Infinity;
@@ -1530,6 +1542,7 @@
             if (target && !swapped && p >= SWAP[1][0]) {
                 swapped = true;
                 glitch.burst(260, target.getBoundingClientRect());
+                sfx.play('glitch', 240, .7);
                 tear(z);
             }
         }).then(() => {
@@ -1564,6 +1577,7 @@
             el.style.transformOrigin = `${W / 2 - (r.left - (m ? m.e : 0))}px ${H / 2 - (r.top - (m ? m.f : 0))}px`;
         });
         glitch.burst(420);
+        sfx.play('eject'); // ガガッ → プツン(長さは EJECT と SHAKE に合わせてある)
         const EJECT = 380, SHAKE = .55;
         let jx = 0, jy = 0, last = 0;
         tween(EJECT, (p) => {
@@ -1609,6 +1623,7 @@
             set(0, 0);
             glitch.burst(360);
             const DUR = 760, CLEAR = .5; // 勢いよく引き(ヒュッ)、半ばで砂嵐が止んで番組にもどる
+            sfx.play('whoosh', DUR, true, 0, .6);
             const easeOut = (t) => 1 - (1 - t) ** 4;
             let cleared = false;
             tween(DUR, (p) => {
@@ -1690,6 +1705,9 @@
         let ch = 1, on = false, visible = false, waiting = false;
         let raf = 0, frames = [], fKey = '', fi = 0, lastF = 0, burstUntil = 0, tunedAt = 0;
         let osdTimer = 0, swapTimer = 0, reelTimer = 0, hoverTimer = 0;
+        // 砂嵐の音: 番組のないチャンネルでは小さく、はじき出された直後は大きく鳴り続ける
+        const snowSound = () => sfx.snow(!on || !visible || document.hidden ? 0
+            : screenEl.classList.contains('is-jammed') ? 1 : chan(ch) ? 0 : .3);
 
         // つまみのまわりの目盛り(番組のない番号は薄く)
         const nums = Array.from({ length: N }, (_, i) => {
@@ -2278,7 +2296,11 @@
             cancelAnimationFrame(raf);
             raf = 0;
         }
-        document.addEventListener('visibilitychange', () => (document.hidden ? stop() : visible && start()));
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stop();
+            else if (visible) start();
+            snowSound();
+        });
 
         // プロダクトの番組は、作品の画面を順に映す
         function reel() {
@@ -2298,12 +2320,16 @@
             }, 2600);
         }
 
-        function tune(n) {
+        // click: つまみのカチッも鳴らす(電源が入って映るときは、砂嵐のザッだけ)
+        function tune(n, click = true) {
             if (!on) return;
             n = ((n - 1 + N) % N) + 1;
             ch = n;
             tunedAt = performance.now();
             const c = chan(n);
+            sfx.play('static', RM ? 120 : 300);
+            if (click) sfx.play('click');
+            snowSound();
             chans.forEach((o) => o.prog.classList.remove('is-still'));
             knob.style.transform = `rotate(${ANG(n)}deg)`;
             burstUntil = tunedAt + (RM ? 0 : 300);
@@ -2342,10 +2368,11 @@
             const done = () => {
                 screenEl.classList.remove('is-off', 'is-powering');
                 on = true;
-                tune(ch);
+                tune(ch, false);
                 if (typeof then === 'function') then();
                 else hint();
             };
+            sfx.play('power');
             if (RM) {
                 done();
                 return;
@@ -2384,6 +2411,8 @@
             const { z, bd, r, full, at } = plate(c);
             busy = true;
             glitch.burst(160, r); // 写しの板に替わる瞬間も、グリッチでごまかす
+            sfx.play('glitch', 140, .7);
+            sfx.play('whoosh', 420);
             if (bd) bd.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.7, 0, .2, 1)', fill: 'forwards' });
             z.animate([
                 { transform: `translate(${r.left}px, ${r.top}px) scale(1)`, borderRadius: '24px' },
@@ -2520,7 +2549,9 @@
                 if (RM) return;
                 screenEl.classList.toggle('is-jammed', jammed);
                 burstUntil = jammed ? Infinity : performance.now() + 60;
+                snowSound();
                 if (!jammed) {
+                    sfx.play('snap');
                     screenEl.classList.remove('is-tuning');
                     void screenEl.offsetWidth;
                     screenEl.classList.add('is-tuning');
@@ -2559,6 +2590,7 @@
             },
             toggle(show) {
                 visible = show;
+                snowSound();
                 if (!show) {
                     stop();
                     clearInterval(reelTimer);
@@ -2647,6 +2679,7 @@
                     img.src = btn.dataset.src;
                     img.alt = btn.dataset.alt;
                     flicker(media);
+                    sfx.play('static', 110, .5);
                 };
                 next.src = btn.dataset.src;
             });
@@ -2671,6 +2704,7 @@
         osd.setAttribute('aria-hidden', 'true');
         osd.textContent = `${back ? '◀◀' : '▶▶'} ${label}`;
         media.append(osd);
+        sfx.play(RM ? 'snap' : 'tape', back);
         const done = () => {
             osd.textContent = label;
             media._osd = setTimeout(() => osd.classList.add('is-out'), 900);
@@ -2891,6 +2925,9 @@
             running = true;
             input.disabled = true;
             show();
+            // 走り抜ける長さ(1 コマで RM なら 4 マス・60 ミリ秒、ふだんは 1 マス・28 ミリ秒)と、煙が替わる速さ(4 コマ)に合わせる
+            const tick = RM ? 60 : 28, frames = Math.ceil((cols + W) / (RM ? 4 : 1));
+            sfx.play('train', frames * tick, (tick * 4) / 1000);
             return new Promise((done) => {
                 let x = cols, k = 0;
                 const step = () => {
@@ -2937,28 +2974,36 @@
             sync();
         }
 
-        input.addEventListener('input', sync);
+        input.addEventListener('input', () => {
+            sfx.play('key');
+            sync();
+        });
         input.addEventListener('keydown', (e) => {
             if (running) return e.preventDefault();
             if (e.key === 'Enter') {
                 e.preventDefault();
+                sfx.play('key', true);
                 const v = input.value;
                 input.value = '';
                 sync();
                 run(v);
             } else if (e.key === 'Tab' && input.value) {
                 e.preventDefault();
+                sfx.play('key');
                 complete();
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
+                sfx.play('key');
                 hi = clamp(hi + (e.key === 'ArrowUp' ? -1 : 1), 0, hist.length);
                 input.value = hist[hi] || '';
                 sync();
             } else if (e.key === 'l' && e.ctrlKey) {
                 e.preventDefault();
+                sfx.play('key');
                 CMDS.clear();
             } else if (e.key === 'c' && e.ctrlKey && !getSelection().toString()) {
                 e.preventDefault();
+                sfx.play('key');
                 put(`${PS} ${esc(input.value)}^C`, '');
                 input.value = '';
                 sync();

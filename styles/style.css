@@ -307,6 +307,52 @@ button {
     transform-origin: left;
 }
 
+/* 音のスイッチ: メニューの右に、ドットのスピーカー。切っているときは × で、少し薄く。
+   JavaScript が動かないとき(鳴らせない)は出さない */
+.nav {
+    margin-left: auto;
+}
+
+.sound-toggle {
+    display: none;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: 0 -8px 0 clamp(14px, 2.4vw, 32px);
+    color: var(--sub);
+    transition: color .25s;
+}
+
+.js .sound-toggle {
+    display: inline-flex;
+}
+
+.js .sound-toggle[hidden] {
+    display: none;
+}
+
+.sound-toggle:hover,
+.sound-toggle[aria-pressed="true"] {
+    color: var(--ink);
+}
+
+.sound-toggle svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.sound-toggle .sound-on,
+.sound-toggle[aria-pressed="true"] .sound-off {
+    display: none;
+}
+
+.sound-toggle[aria-pressed="true"] .sound-on {
+    display: block;
+}
+
 /* ==========================================================================
    画面
    ========================================================================== */

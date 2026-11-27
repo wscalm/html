@@ -1612,15 +1612,27 @@ button {
     color: #ff8a00;
 }
 
-/* cron の書き方(毎時 0 分なら 0 * * * *)。端末の文字のように */
+/* cron: ロゴがないので、経歴の端末と同じ黒地に緑で。時計の札と、書き方(毎時 0 分なら 0 * * * *)の札。
+   ほかのロゴの色に負けないように */
+.tech-badge--cron {
+    background: #1c1c1c;
+}
+
+.tech-badge--cron svg {
+    width: 13px;
+    height: 13px;
+    fill: #8ae234;
+}
+
 .tech-code {
-    padding: 1px 7px;
-    border: 1px solid var(--line);
+    padding: 0 8px;
     border-radius: 4px;
-    background: #f4f4f2;
-    font: 500 12px / 1.6 ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
-    letter-spacing: .04em;
+    background: #1c1c1c;
+    color: #8ae234;
+    font: 600 12px / 20px ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+    letter-spacing: .06em;
     white-space: pre;
+    text-shadow: none;
 }
 
 .tech-note {

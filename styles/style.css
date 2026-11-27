@@ -41,6 +41,12 @@ html.is-intro {
     overflow: hidden;
 }
 
+/* トップは 1 画面に収まるので、指で上下に引っぱっても跳ね返らないようにする(テレビがずれて見えないように) */
+html.is-top,
+html.is-top body {
+    overscroll-behavior: none;
+}
+
 /* 導入がないとき、Web フォントが届くまで(最大 0.8 秒)本文を隠す。隠していても字の形は測られるので、書体の読み込みは進む */
 html.is-fontwait body {
     visibility: hidden;
@@ -429,6 +435,8 @@ button {
 
 .tv {
     width: var(--tw);
+    /* 画面を左右に払ってチャンネルを替えるので、テレビの上ではスクロールもズームもさせない(縦に動いても、テレビがずれないように) */
+    touch-action: none;
 }
 
 /* 光は左上から。筐体は左上が明るく右下へ少し沈み、縁に光が当たり、右下に影を落とす */
@@ -481,8 +489,6 @@ button {
     text-align: left;
     letter-spacing: .02em;
     -webkit-tap-highlight-color: transparent;
-    /* 左右に払ってチャンネルを替えるので、画面の上ではスクロールもズームもさせない(縦に少し動いても、テレビがずれないように) */
-    touch-action: none;
 }
 
 /* ブラウン管のふくらみと、ガラスの映りこみ */

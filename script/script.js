@@ -1256,6 +1256,7 @@
         updateChrome();
         fitMark();
         header.classList.remove('is-scrolled');
+        root.classList.toggle('is-top', s.id === 'top'); // トップは 1 画面に収まるので、引っぱっても跳ね返らないようにする(CSS)
         tv.toggle(s.id === 'top');
         page.enter(s);
         requiet(); // 背景の静かにする所は、次のコマで測る(画面を替えたコマに重ねない)
@@ -2507,9 +2508,9 @@
             sy = e.touches[0].clientY;
             swiped = false;
         }, { passive: true });
-        // 払う指が少し縦に動いても、ページ(テレビ)が上下にずれないようにする。
+        // テレビの上で指を縦に動かしても、ページ(テレビ)が上下にずれないようにする(画面だけでなく、テレビ全体で)。
         // CSS の touch-action: none に加えて、引っぱると跳ね返るブラウザ(iPhone の Safari など)のためにここでも止める
-        screenEl.addEventListener('touchmove', (e) => {
+        tvEl.addEventListener('touchmove', (e) => {
             if (e.cancelable) e.preventDefault();
         }, { passive: false });
         screenEl.addEventListener('touchend', (e) => {

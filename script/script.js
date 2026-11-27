@@ -2566,6 +2566,22 @@
 
         return {
             powerOn,
+            // 端末の reboot: 電源を切った、はじめの状態にもどす(導入のあとで、また電源が入る)
+            off() {
+                on = false;
+                waiting = false;
+                clearTimeout(swapTimer);
+                clearTimeout(osdTimer);
+                clearInterval(reelTimer);
+                miniStop();
+                miniArt.textContent = '';
+                miniBox.classList.add('is-dark');
+                osd.classList.remove('is-on');
+                screenEl.classList.remove('is-powering', 'is-tuning', 'is-jammed');
+                screenEl.classList.add('is-off');
+                burstUntil = 0;
+                snowSound();
+            },
             mini3d,
             screen: screenEl,
             // 砂嵐でうめる(on)/ 止めて、番組を少し揺らしてもどす(off)
@@ -2850,7 +2866,7 @@
 
         const CMDS = {
             help() {
-                pre('使えるコマンド:\n  ls  cat  cd  whoami  pwd  date  echo  history  clear  neofetch  git log  exit');
+                pre('使えるコマンド:\n  ls  cat  cd  whoami  pwd  date  echo  history  clear  neofetch  git log  reboot  exit');
                 put('# ほかにもあるかもしれない', 'tl-comment');
             },
             ls(a) {
@@ -2901,6 +2917,20 @@
                     .map(([h, d, t, head]) => `<span class="tl-git">*</span> <span class="glog-hash">${h}</span>${head ? ' <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span>' : ''} ${d} ${t}`).join('\n'), 'tl-out tl-pre');
             },
             exit: () => go(cur.parent || 'top'),
+            // トップにもどって、導入をノイズからもう一度(音を入れていれば音付き)
+            reboot() {
+                pre('Broadcast message from wsws@works:\n\nThe system is going down for reboot NOW!');
+                running = true;
+                input.disabled = true;
+                setTimeout(() => {
+                    running = false;
+                    input.disabled = false;
+                    if (!rebootSite()) {
+                        pre('reboot: いまは再起動できない');
+                        input.focus({ preventScroll: true });
+                    }
+                }, RM ? 0 : 700);
+            },
             // 載せていないもの
             sl,
             sudo: () => pre('wsws is not in the sudoers file. This incident will be reported.'),
@@ -2988,7 +3018,7 @@
         // Tab: コマンド名とファイル名を補う
         function complete() {
             const v = input.value, parts = v.split(/\s+/), last = parts.pop();
-            const pool = parts.length ? ['career.txt', 'now.txt', 'research.txt', 'skills/', 'works/', ...Object.keys(WORKS).map((n) => `works/${n}/`)] : ['ls', 'cat', 'cd', 'whoami', 'pwd', 'date', 'echo', 'history', 'clear', 'neofetch', 'git', 'exit', 'help'];
+            const pool = parts.length ? ['career.txt', 'now.txt', 'research.txt', 'skills/', 'works/', ...Object.keys(WORKS).map((n) => `works/${n}/`)] : ['ls', 'cat', 'cd', 'whoami', 'pwd', 'date', 'echo', 'history', 'clear', 'neofetch', 'git', 'reboot', 'exit', 'help'];
             const hits = pool.filter((p) => p.startsWith(last));
             if (hits.length === 1) input.value = [...parts, hits[0]].join(' ') + (hits[0].endsWith('/') ? '' : ' ');
             else if (hits.length > 1) {
@@ -3425,7 +3455,24 @@
     if (location.hash && byId(idFromHash()) && location.hash.slice(1) !== first.id) history.replaceState(null, '', `#${first.id}`);
     show(first);
 
-    if (root.classList.contains('is-intro')) {
+    if (root.classList.contains('is-intro')) runIntro(first);
+
+    // 端末の reboot: トップにもどって、導入をノイズからもう一度流す。
+    // 打ったキーが「押した」ことになるので、音を入れていれば、ブラウザも導入の音を出させてくれる。
+    // 動きを減らす設定では導入がないので、トップへもどるだけ
+    function rebootSite() {
+        if (busy) return false;
+        const top = byId('top');
+        if (RM) return cur === top || go('top');
+        if (location.hash.slice(1) !== 'top') history.pushState(null, '', '#top');
+        root.classList.add('is-intro'); // 先に付ける(テレビに勝手に電源が入らないように)
+        tv.off();
+        show(top);
+        runIntro(top);
+        return true;
+    }
+
+    function runIntro(first) {
         window.__wsIntro = true;
         busy = true;
         const containers = [first.el, header, dock];

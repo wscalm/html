@@ -169,6 +169,42 @@ button {
     height: 100%;
 }
 
+/* 音を入れている人が開き直したとき: 白い画面にスピーカーと「押すと始まる」。画面のどこを押しても始まる */
+.intro-gate {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    font-size: 13px;
+    letter-spacing: .08em;
+    color: var(--sub);
+}
+
+.intro-gate[hidden] {
+    display: none;
+}
+
+.intro-gate:focus-visible {
+    outline: none;
+}
+
+.intro-gate svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--ink);
+    animation: gate-wait 1.2s steps(1, end) infinite;
+}
+
+@keyframes gate-wait {
+    50% {
+        opacity: .3;
+    }
+}
+
 .intro-skip {
     position: absolute;
     right: var(--gutter);

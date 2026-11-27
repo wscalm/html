@@ -91,6 +91,8 @@
     <!-- 導入と画面の切り替え: 小さな W と S が明滅し、次の画面の形をつくってから本物に切り替わる -->
     <div class="intro" data-fx>
         <canvas class="intro-canvas" aria-hidden="true"></canvas>
+        <!-- 音を入れている人が開き直したとき: ブラウザは押すまで音を出させないので、押すと音付きで導入が始まる -->
+        <button class="intro-gate" type="button" aria-label="押すと音付きで始まる" data-fx-gate hidden><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#i-sound-on"/></svg><span aria-hidden="true">押すと始まる</span></button>
         <button class="intro-skip" type="button" data-fx-skip>スキップ</button>
     </div>
 

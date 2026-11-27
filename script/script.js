@@ -1398,7 +1398,7 @@
 
     /* テレビの番組と、行き先の画面とをつなぐ部分。番組の板はここへ縮んでおさまり、もどるときはここから広がる。
        プロダクトは最初の作品の画面、作品は大きな画面、ボットは投稿のアプリの画面、経歴は端末、SNS はアカウントのまとまり */
-    const BRIDGE = { works: '.products .monitor-screen', bots: '.monitor--app .monitor-screen', about: '.term-win', sns: '.sns' };
+    const BRIDGE = { works: '.products .monitor-screen', bots: '.feed-app', about: '.term-win', sns: '.sns' };
     const bridgeOf = (s, src) => {
         // プロダクトの一覧は、テレビに映っていた作品の画面へ
         if (s.id === 'works' && src) {
@@ -2793,7 +2793,7 @@
 
     $$('[data-tabs]').forEach((list) => {
         const tabs = $$('[role="tab"]', list);
-        // 使っているもの: 版によって違う行(data-gen)は、選んだ版の分だけ出す
+        // 技術構成: 版によって違う行(data-gen)は、選んだ版の分だけ出す
         const genRows = (tab) => {
             const v = $('.gen-v', tab)?.textContent.trim();
             const body = list.closest('.screen');
@@ -2862,8 +2862,8 @@
         const WORKS = { 'nagai-kotoba-database': 'work-nagai', 'wsws-bookshelf': 'work-bookshelf', romberg: 'work-romberg', 'nagai-kotoba-bot': 'bots' };
         const worksLs = () => put(Object.entries(WORKS).map(([n, id]) => `<a href="#${id}" data-go="${id}">${n}/</a>`).join(''), 'tl-out term-ls');
         const FILES = {
-            'career.txt': '2026.04  東京の IT 企業で働きはじめる\n2024.04  岡山大学大学院 環境生命自然科学研究科\n2020.04  岡山大学 工学部 情報系学科\n2001.04  オギャー',
-            'now.txt': "仕事のかたわら、個人でウェブサイトや bot を作っています。読んだ本は WSWS'S BOOKSHELF. に記録しています。",
+            'career.txt': '2026.04  東京の IT 企業 入社\n2024.04  岡山大学大学院 環境生命自然科学研究科 進学\n2020.04  岡山大学 工学部 情報系学科 入学\n2001.04  オギャー',
+            'now.txt': '趣味でウェブアプリケーションやボットを作っています。',
         };
         const age = () => {
             const d = new Date();
@@ -2919,7 +2919,7 @@
             },
             git(a) {
                 if (a[0] !== 'log') return pre(a[0] ? `git: '${a[0]}' は git のコマンドではない` : 'usage: git log');
-                put([['3f9a2c1', '2026.04', '東京の IT 企業で働きはじめる', true], ['8b1e7d4', '2026.03', '岡山大学大学院 修了'], ['c27a5f0', '2024.04', '岡山大学大学院に進学'], ['e91d2b6', '2024.03', '岡山大学 卒業'], ['5d40e9b', '2020.04', '岡山大学に入学'], ['0a6c3e8', '2020.03', '大阪の高校を卒業'], ['0000001', '2001.04', 'オギャー']]
+                put([['3f9a2c1', '2026.04', '東京の IT 企業 入社', true], ['8b1e7d4', '2026.03', '岡山大学大学院 修了'], ['c27a5f0', '2024.04', '岡山大学大学院 進学'], ['e91d2b6', '2024.03', '岡山大学 卒業'], ['5d40e9b', '2020.04', '岡山大学 入学'], ['0a6c3e8', '2020.03', '大阪の高校 卒業'], ['0000001', '2001.04', 'オギャー']]
                     .map(([h, d, t, head]) => `<span class="tl-git">*</span> <span class="glog-hash">${h}</span>${head ? ' <span class="glog-ref">(<span class="glog-head">HEAD -&gt;</span> <span class="glog-branch">main</span>)</span>' : ''} ${d} ${t}`).join('\n'), 'tl-out tl-pre');
             },
             exit: () => go(cur.parent || 'top'),
@@ -3440,7 +3440,7 @@
             list.replaceChildren(...posts.map((p) => {
                 const li = tpl.cloneNode(true);
                 $('.fpost', li).href = p.url;
-                $('.fpost-who span', li).textContent = p.ago;
+                $('.fpost-ago', li).textContent = p.ago;
                 $('.fpost-word', li).textContent = p.word;
                 $('.fpost-yomi', li).textContent = p.yomi;
                 return li;

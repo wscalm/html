@@ -232,11 +232,33 @@ button {
 }
 
 .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: .6em;
     font-family: var(--f-logo);
     font-weight: 600;
     font-size: 13px;
     letter-spacing: .02em;
     font-synthesis: none;
+}
+
+/* ファビコンと同じアイコン(走査線で切った W) */
+.logo-icon {
+    flex: none;
+    width: 2em;
+    height: 2em;
+}
+
+/* 幅の狭いスマホでは、メニューと重ならないようにアイコンだけにする(文字は読み上げ用に残す) */
+@media (max-width: 420px) {
+    .logo-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
 }
 
 .nav {
@@ -247,6 +269,7 @@ button {
 .nav a {
     position: relative;
     padding: 4px 0;
+    white-space: nowrap; /* 幅の狭いスマホでも「プロダクト」を折り返さない */
     font-size: 14px;
     font-weight: 500;
 }
@@ -326,8 +349,12 @@ button {
    ========================================================================== */
 
 .screen--top {
-    grid-template-rows: minmax(0, 1fr) auto;
-    padding: calc(var(--header-h) + 24px) var(--gutter) 64px;
+    /* テレビとロゴを 1 組にして、画面の真ん中に置く(余白は上下にまとめる)。
+       --tw(テレビの幅)はロゴの幅にも使うので、ここで決める */
+    --tw: min(780px, 52vw, calc((100svh - var(--header-h) - 190px) / .84));
+    grid-template-rows: auto auto;
+    align-content: center;
+    padding: calc(var(--header-h) + 24px) var(--gutter) 48px;
     overflow: hidden;
 }
 
@@ -338,11 +365,10 @@ button {
     display: flex;
     align-items: center;
     gap: clamp(32px, 5vw, 80px);
-    margin-bottom: 3vh;
+    margin-bottom: calc(var(--tw) * .05);
 }
 
 .tv {
-    --tw: min(660px, 52vw, calc((100svh - var(--header-h) - 8.2vw - 150px) / .7));
     width: var(--tw);
 }
 
@@ -439,13 +465,6 @@ button {
     opacity: 1;
 }
 
-.tv-prog--text {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 9% 8%;
-}
-
 .tv-cap {
     position: absolute;
     left: 0;
@@ -473,34 +492,6 @@ button {
     text-overflow: ellipsis;
 }
 
-.tv-big {
-    font-size: max(18px, calc(var(--tw) * .05));
-    font-weight: 700;
-    line-height: 1.35;
-    font-feature-settings: 'palt';
-    overflow-wrap: anywhere;
-}
-
-.tv-small {
-    margin-top: calc(var(--tw) * .012);
-    font-size: max(10px, calc(var(--tw) * .019));
-    color: #a9a9a9;
-}
-
-.tv-row {
-    display: flex;
-    gap: 1.2em;
-    font-size: max(11px, calc(var(--tw) * .023));
-    line-height: 2.1;
-}
-
-.tv-row b {
-    flex: none;
-    width: 5.5em;
-    font-weight: 500;
-    color: #a9a9a9;
-}
-
 .tv-bar {
     display: inline-block;
     width: var(--w);
@@ -508,6 +499,274 @@ button {
     margin-right: .4em;
     vertical-align: -.1em;
     background: #e9e9e9;
+}
+
+/* ボット・SNS: アプリの画面を見ている感じ(プロダクトのスクリーンショットと同じく明るい画面) */
+.tv-app {
+    background: #f1f1ef;
+    color: #141414;
+    font-size: max(8px, calc(var(--tw) * .019));
+    line-height: 1.5;
+}
+
+.tv-app-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 11%;
+    padding: 0 6%;
+    border-bottom: 1px solid #dcdcd8;
+    background: #fff;
+    font-weight: 700;
+}
+
+.tv-app-bar i {
+    width: 1.4em;
+    height: .9em;
+    border-top: 2px solid #9a9a96;
+    border-bottom: 2px solid #9a9a96;
+}
+
+.tv-app-bar i:last-child {
+    width: 1.1em;
+    height: 1.1em;
+    border: 2px solid #9a9a96;
+    border-radius: 50%;
+}
+
+.tv-post {
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    top: 19%;
+    display: flex;
+    flex-direction: column;
+    padding: 4.5% 5% 3.5%;
+    border: 1px solid #e0e0dc;
+    border-radius: calc(var(--tw) * .014);
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+.tv-post-head {
+    display: flex;
+    align-items: center;
+    gap: .8em;
+}
+
+.tv-avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.6em;
+    height: 2.6em;
+    border-radius: 50%;
+    background: #141414;
+    color: #fff;
+    font-weight: 700;
+}
+
+.tv-post-who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.tv-post-who > span {
+    overflow: hidden;
+    color: #8a8a86;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tv-post-word {
+    margin-top: .7em;
+    font-size: max(12px, calc(var(--tw) * .042));
+    font-weight: 700;
+    line-height: 1.3;
+    font-feature-settings: 'palt';
+    overflow-wrap: anywhere;
+}
+
+.tv-post-yomi {
+    margin-top: .3em;
+    color: #6f6f6b;
+}
+
+.tv-post-foot {
+    display: flex;
+    gap: 3.2em;
+    margin-top: 1em;
+    color: #9a9a96;
+}
+
+.tv-post-foot svg {
+    width: 1.25em;
+    height: 1.25em;
+}
+
+/* 経歴: 端末の画面。チャンネルが合うたび(表示されるたび)に、1 行ずつ出る */
+.tv-term {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .25em;
+    padding: 0 8% 9%;
+    font: 500 max(9px, calc(var(--tw) * .021)) / 1.7 ui-monospace, 'SF Mono', Menlo, Consolas, var(--f-sans);
+    color: #e8e8e8;
+    background: radial-gradient(120% 100% at 30% 20%, #1b1b1b, #0a0a0a 70%);
+}
+
+.tv-term-line {
+    display: flex;
+    gap: .6em;
+    white-space: nowrap;
+    animation: term-line .01s calc(var(--i) * .45s + .15s) both;
+}
+
+.tv-term-line i {
+    font-style: normal;
+}
+
+/* プロンプトは Ubuntu の端末と同じ色分け: ユーザー名@ホスト名は緑、場所(~)は青、: と $ は白 */
+.tv-ps {
+    color: #e8e8e8;
+}
+
+.tv-ps-user {
+    font-weight: 700;
+    color: #8ae234;
+}
+
+.tv-ps-dir {
+    font-weight: 700;
+    color: #729fcf;
+}
+
+.tv-term-line.is-out {
+    font-family: var(--f-sans);
+}
+
+.tv-term-line b {
+    flex: none;
+    width: 4.2em;
+    font-weight: 500;
+    color: #9a9a9a;
+}
+
+.tv-term-cursor {
+    display: inline-block;
+    width: .6em;
+    height: 1.1em;
+    vertical-align: -.15em;
+    background: #e8e8e8;
+    animation: term-blink 1s steps(1) infinite;
+}
+
+@keyframes term-line {
+    from { visibility: hidden; }
+}
+
+@keyframes term-blink {
+    50% { opacity: 0; }
+}
+
+/* SNS: リンクをまとめたプロフィールの画面 */
+.tv-links-banner {
+    display: block;
+    height: 24%;
+    background:
+        linear-gradient(rgba(20, 20, 20, .82), rgba(20, 20, 20, .82)),
+        repeating-linear-gradient(180deg, #2a2a2a 0 2px, #141414 2px 5px);
+}
+
+.tv-links-me {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: calc(var(--tw) * -.04);
+    line-height: 1.35;
+}
+
+.tv-links-me b {
+    margin-top: .4em;
+    font-size: 1.25em;
+}
+
+.tv-links-me span {
+    color: #8a8a86;
+    font: 700 .8em var(--f-logo);
+    letter-spacing: .04em;
+}
+
+.tv-prog .tv-links-avatar {
+    position: static;
+    opacity: 1;
+    filter: none;
+    width: calc(var(--tw) * .085);
+    height: calc(var(--tw) * .085);
+    border: 3px solid #f1f1ef;
+    border-radius: 50%;
+}
+
+.tv-links-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--tw) * .012);
+    margin: 4.5% 9% 0;
+}
+
+.tv-link {
+    display: flex;
+    justify-content: space-between;
+    gap: .6em;
+    padding: .6em .9em;
+    border: 1px solid #d9d9d5;
+    border-radius: 99px;
+    background: #fff;
+    white-space: nowrap;
+}
+
+.tv-link b {
+    font-weight: 700;
+}
+
+.tv-link span {
+    overflow: hidden;
+    color: #6f6f6b;
+    text-overflow: ellipsis;
+}
+
+.tv-link.is-soon {
+    background: transparent;
+    border-style: dashed;
+}
+
+.tv-link.is-soon span {
+    color: #a3a3a0;
+}
+
+/* 小さなテレビでは、投稿の下のボタンを省き、端末の見出しを詰める */
+@media (max-width: 760px) {
+    .tv-post {
+        top: 16%;
+    }
+
+    .tv-post-foot {
+        display: none;
+    }
+
+    .tv-term-line b {
+        width: 3.2em;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tv-term-line,
+    .tv-term-cursor {
+        animation: none;
+    }
 }
 
 .tv-static {
@@ -648,8 +907,32 @@ button {
     background: repeating-conic-gradient(#e6e4df 0 6deg, #d5d3ce 6deg 12deg);
     box-shadow: inset 0 0 0 calc(var(--tw) * .014) #ebe9e4;
     transition: transform .22s cubic-bezier(.3, 1.6, .5, 1);
+    cursor: grab;
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
+}
+
+.tv-knob:active {
+    cursor: grabbing;
+}
+
+/* カーソルを合わせると、つまみが小さく揺れて「回せる」と伝える。最初に電源が入ったときも 2 回揺れる(is-hint) */
+@media (prefers-reduced-motion: no-preference) {
+    .tv-knob.is-hint {
+        animation: knob-wiggle .5s cubic-bezier(.3, .6, .4, 1) 2;
+    }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .tv-knob:hover {
+        animation: knob-wiggle .6s cubic-bezier(.3, .6, .4, 1);
+    }
+}
+
+@keyframes knob-wiggle {
+    25% { rotate: 9deg; }
+    55% { rotate: -6deg; }
+    80% { rotate: 2deg; }
 }
 
 .tv-knob span {
@@ -883,9 +1166,18 @@ button {
     display: none;
 }
 
-/* 番組表 */
+/* 番組表: 画面には出さない(ブラウン管だけで見せる)。読み上げ用の目次として残し、キーボードで入ったときだけ横に出す */
 .tv-guide {
     width: 240px;
+}
+
+.tv-guide:not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .tv-list {
@@ -987,6 +1279,12 @@ button {
     white-space: nowrap;
     min-width: 0;
     user-select: none;
+}
+
+/* トップでは、テレビの下にテレビと同じ幅で置く(文字の大きさは script の fitMark が幅に合わせる) */
+.screen--top .hero-mark {
+    justify-self: center;
+    width: var(--tw);
 }
 
 .hero-mark .ch {
@@ -1541,7 +1839,7 @@ button {
     }
 }
 
-/* 縦長の画面では、番組表をテレビの下に置く */
+/* 縦長の画面では、番組表(キーボードで入ったときだけ見える)をテレビの下に置く */
 @media (max-width: 900px), (max-aspect-ratio: 1 / 1) {
     .tv-set {
         flex-direction: column;
@@ -1551,8 +1849,11 @@ button {
     }
 
     /* --tw は中の文字の大きさにも使うので、% ではなく画面の幅と高さから決める */
+    .screen--top {
+        --tw: clamp(260px, calc((100svh - var(--header-h) - 200px) / .84), min(560px, calc(100vw - var(--gutter) * 2)));
+    }
+
     .tv {
-        --tw: clamp(260px, calc((100svh - var(--header-h) - 8.2vw - 380px) / .7), min(560px, calc(100vw - var(--gutter) * 2)));
         align-self: center;
     }
 
@@ -1575,7 +1876,7 @@ button {
     }
 
     .nav {
-        gap: 14px;
+        gap: clamp(10px, 3.4vw, 14px);
     }
 
     .nav a {
@@ -1635,9 +1936,9 @@ button {
         margin-bottom: 28px;
     }
 
-    /* 指で回しやすいよう、つまみを大きく。目盛りの数字は飾りにする */
+    /* 指で回しやすいよう、つまみは少し大きく(数字と針が窮屈にならない程度に)。目盛りの数字は飾りにする */
     .tv-dial {
-        --ki: 12%;
+        --ki: 19%;
     }
 
     .tv-num {

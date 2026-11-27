@@ -7,7 +7,10 @@
     <title>WSWS.WORKS</title>
     <meta name="description" content="WSWS.WORKS — わそわそが個人で開発しているウェブサイト、ウェブアプリ、bot。">
     <meta name="theme-color" content="#ffffff">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='7' fill='%23fff' stroke='%23111114' stroke-width='2'/%3E%3Cpath d='M4.2 10.5 6.9 21.5 9.7 14.5 12.5 21.5 15.2 10.5' fill='none' stroke='%23111114' stroke-width='2.6' stroke-linejoin='miter' stroke-miterlimit='4'/%3E%3Cpath d='M17.6 11.2H22.6L20.2 14.9C22.9 14.9 24 16.5 24 18.3 24 20.4 22.6 21.6 20.6 21.6 19.4 21.6 18.5 21.2 17.9 20.5' fill='none' stroke='%23111114' stroke-width='2.3'/%3E%3Ccircle cx='27' cy='21' r='1.6' fill='%232a2aff'/%3E%3C/svg%3E">
+    <!-- ファビコン: 走査線で切った W(ロゴと同じ書体)。タブ用は切れ目を減らした版、ホーム画面用は 5 本の帯 -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@200..800&family=Inter:wght@400;500;600&family=Unbounded:wght@400..900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -37,7 +40,7 @@
     </div>
 
     <header class="site-header" data-part="links" data-chrome>
-        <a class="logo" href="#top" data-go="top">WSWS.WORKS</a>
+        <a class="logo" href="#top" data-go="top"><img class="logo-icon" src="favicon.svg" alt="" width="64" height="64"><span class="logo-text">WSWS.WORKS</span></a>
         <nav class="nav" aria-label="メインナビゲーション">
             <a href="#works" data-go="works">プロダクト</a>
             <a href="#bots" data-go="bots">ボット</a>
@@ -61,7 +64,8 @@
     <main id="main" class="world">
         <section class="screen screen--top" id="top" data-name="トップ" aria-label="トップ">
             <!--
-                テレビ。番組表のチャンネルを選ぶと、その画面へ入る(パソコンでは、番組表にカーソルを合わせると試し見になる)。
+                テレビ。つまみ・ホイール・矢印キー・数字キー(スマホは画面のスワイプ)でチャンネルを替え、画面を押すとその画面へ入る。
+                番組表は画面には出さず、読み上げとキーボード操作のための目次として残す(キーボードで入ったときだけ見える)。
                 チャンネルを足すときは、番組表(.tv-list)に <li> を、画面(.tv-content)に .tv-prog を、同じ data-ch で足す。
                 つまみの目盛りはチャンネルの数だけ並ぶ(6 より少ないときは 6)。番組のない番号は砂嵐になる。
                 右の小さな画面の絵(ASCII アート)は script.js の MINI_ART に、行き先の画面の id で足す。
@@ -78,22 +82,48 @@
                                         <img src="images/works/romberg-graph.jpg" alt="" data-title="ロンバーグ積分計算ツール" width="1280" height="800" decoding="async">
                                         <span class="tv-cap"><b>プロダクト</b><span data-reel-title>長い言葉のデータベース</span></span>
                                     </span>
-                                    <span class="tv-prog tv-prog--text" data-ch="2" hidden>
-                                        <span class="tv-big" data-bot-word>寿限無寿限無五劫の擦り切れ</span>
-                                        <span class="tv-small" data-bot-yomi>ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
+                                    <!-- ボット: SNS アプリで投稿を見ている画面(最新の投稿は Bluesky から差し替える) -->
+                                    <span class="tv-prog tv-app" data-ch="2" hidden>
+                                        <span class="tv-app-bar"><i></i>ホーム<i></i></span>
+                                        <span class="tv-post">
+                                            <span class="tv-post-head">
+                                                <span class="tv-avatar">長</span>
+                                                <span class="tv-post-who"><b>長い言葉bot</b><span>@nagai-kotoba-bot.bsky.social · <span data-bot-ago>1 時間ごと</span></span></span>
+                                            </span>
+                                            <span class="tv-post-word" data-bot-word>寿限無寿限無五劫の擦り切れ</span>
+                                            <span class="tv-post-yomi" data-bot-yomi>ジュゲムジュゲムゴコウノスリキレ（16文字）</span>
+                                            <span class="tv-post-foot" aria-hidden="true">
+                                                <svg viewBox="0 0 16 16"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                                                <svg viewBox="0 0 16 16"><path d="M3 6.5V5h9l-2-2M13 9.5V11H4l2 2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                                                <svg viewBox="0 0 16 16"><path d="M8 13.2S2.5 9.8 2.5 6.1A2.8 2.8 0 0 1 8 4.9a2.8 2.8 0 0 1 5.5 1.2c0 3.7-5.5 7.1-5.5 7.1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                                            </span>
+                                        </span>
                                         <span class="tv-cap"><b>ボット</b><span>長い言葉bot</span></span>
                                     </span>
-                                    <span class="tv-prog tv-prog--text" data-ch="3" hidden>
-                                        <span class="tv-big">わそわそ</span>
-                                        <span class="tv-row"><b>現在</b><span>ウェブサイト・ウェブアプリ・bot を開発</span></span>
-                                        <span class="tv-row"><b><i class="tv-bar" style="--w:3.2em"></i></b><span><i class="tv-bar" style="--w:5em"></i>大学で自然言語処理を専攻</span></span>
+                                    <!-- 経歴: 端末に打ちこんで、プロフィールを表示している画面(プロンプトは Ubuntu の色: ユーザー名は緑、場所は青)。チャンネルが合うたびに 1 行ずつ出る -->
+                                    <span class="tv-prog tv-term" data-ch="3" hidden>
+                                        <span class="tv-term-line" style="--i:0"><i class="tv-ps"><span class="tv-ps-user">wsws@works</span>:<span class="tv-ps-dir">~</span>$</i> whoami</span>
+                                        <span class="tv-term-line is-out" style="--i:1">わそわそ</span>
+                                        <span class="tv-term-line" style="--i:2"><i class="tv-ps"><span class="tv-ps-user">wsws@works</span>:<span class="tv-ps-dir">~</span>$</i> cat career.txt</span>
+                                        <span class="tv-term-line is-out" style="--i:3"><b>現在</b>ウェブサイト・ウェブアプリ・bot を開発</span>
+                                        <span class="tv-term-line is-out" style="--i:4"><b><i class="tv-bar" style="--w:3.2em"></i></b><span><i class="tv-bar" style="--w:5em"></i>大学で自然言語処理を専攻</span></span>
+                                        <span class="tv-term-line" style="--i:5"><i class="tv-ps"><span class="tv-ps-user">wsws@works</span>:<span class="tv-ps-dir">~</span>$</i> <u class="tv-term-cursor"></u></span>
                                         <span class="tv-cap"><b>経歴</b></span>
                                     </span>
-                                    <span class="tv-prog tv-prog--text" data-ch="4" hidden>
-                                        <span class="tv-row"><b>GitHub</b><span>@wscalm</span></span>
-                                        <span class="tv-row"><b>X</b><span>準備中</span></span>
-                                        <span class="tv-row"><b>Bluesky</b><span>準備中</span></span>
-                                        <span class="tv-row"><b>メール</b><span>準備中</span></span>
+                                    <!-- SNS: リンクをまとめたプロフィールの画面 -->
+                                    <span class="tv-prog tv-app tv-links" data-ch="4" hidden>
+                                        <span class="tv-links-banner"></span>
+                                        <span class="tv-links-me">
+                                            <img class="tv-links-avatar" src="apple-touch-icon.png" alt="" width="180" height="180">
+                                            <b>わそわそ</b>
+                                            <span>WSWS.WORKS</span>
+                                        </span>
+                                        <span class="tv-links-grid">
+                                            <span class="tv-link"><b>GitHub</b><span>@wscalm</span></span>
+                                            <span class="tv-link is-soon"><b>X</b><span>準備中</span></span>
+                                            <span class="tv-link is-soon"><b>Bluesky</b><span>準備中</span></span>
+                                            <span class="tv-link is-soon"><b>メール</b><span>準備中</span></span>
+                                        </span>
                                         <span class="tv-cap"><b>SNS</b></span>
                                     </span>
                                 </span>
@@ -116,14 +146,14 @@
                 </div>
 
                 <div class="tv-guide">
-                    <h2 class="tv-guide-title" data-part="text">番組表</h2>
-                    <ol class="tv-list" data-part="links">
+                    <h2 class="tv-guide-title">番組表</h2>
+                    <ol class="tv-list">
                         <li><a href="#works" data-ch="1"><span class="tv-list-n">1</span><span class="tv-list-name">プロダクト</span></a></li>
                         <li><a href="#bots" data-ch="2"><span class="tv-list-n">2</span><span class="tv-list-name">ボット</span></a></li>
                         <li><a href="#about" data-ch="3"><span class="tv-list-n">3</span><span class="tv-list-name">経歴</span></a></li>
                         <li><a href="#sns" data-ch="4"><span class="tv-list-n">4</span><span class="tv-list-name">SNS</span></a></li>
                     </ol>
-                    <p class="tv-hint" data-part="text"><span class="tv-hint-fine">番組表にカーソルを合わせると試し見。つまみ・ホイール・矢印キーでもチャンネルが変わります</span><span class="tv-hint-touch">テレビの画面を左右にスワイプすると、チャンネルが変わります</span></p>
+                    <p class="tv-hint"><span class="tv-hint-fine">矢印キー・数字キーでもチャンネルが変わります</span><span class="tv-hint-touch">テレビの画面を左右にスワイプすると、チャンネルが変わります</span></p>
                 </div>
             </div>
 

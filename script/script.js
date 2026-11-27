@@ -473,7 +473,7 @@
         const anims = [], ghosts = [];
         const add = (el, kf, opt) => anims.push(el.animate(kf, { fill: 'both', ...opt }));
         const STEP = 'steps(1, end)'; // 途中を補間せず、パッパッと切り替える
-        const SPLIT = 380, DUR = 220, EASE = 'cubic-bezier(.75, 0, .15, 1)'; // 溜めて、一気に飛んで、ピタッと止まる
+        const SPLIT = 800, DUR = 520, EASE = 'cubic-bezier(.75, 0, .15, 1)'; // 大きな W を見せてから、溜めて、一気に飛んで、ピタッと止まる(速すぎると見逃すので、ゆっくりめ)
         const tf = (x, y, s, k, a) => `translate(${x}px, ${y}px) scale(${s}) scaleX(${k}) skewX(${a}deg)`;
         mark.classList.add('is-sequence');
 
@@ -483,7 +483,7 @@
             add(el, [
                 { transform: at, opacity: 0, easing: STEP }, { transform: at, opacity: 1, offset: .3, easing: STEP },
                 { transform: at, opacity: .15, offset: .55, easing: STEP }, { transform: at, opacity: 1 },
-            ], { duration: 150 });
+            ], { duration: 300 });
             // ② シュッと分かれる。飛んでいる間だけ横に伸びて傾き、残像を引く
             const dir = Math.sign(-dx) || 1;
             const split = [
@@ -492,7 +492,7 @@
                 { transform: tf(0, 0, 1, 1, 0) },
             ];
             add(el, split, { duration: DUR, delay: SPLIT, easing: EASE, fill: 'forwards' });
-            [[16, .2], [32, .08]].forEach(([lag, op]) => {
+            [[36, .2], [72, .08]].forEach(([lag, op]) => {
                 const g = el.cloneNode(true);
                 g.className = 'ch ghost';
                 g.removeAttribute('data-part');
@@ -510,12 +510,12 @@
             if (W_AT.includes(i)) return;
             const near = W_AT.reduce((b, j) => (Math.abs(j - i) < Math.abs(b - i) ? j : b), 0);
             const dir = Math.sign(i - near);
-            const delay = SPLIT + DUR - 40 + (Math.abs(i - near) - 1) * 55;
-            last = Math.max(last, delay + 150);
+            const delay = SPLIT + DUR - 80 + (Math.abs(i - near) - 1) * 120;
+            last = Math.max(last, delay + 320);
             add(el, [
                 { clipPath: dir > 0 ? 'inset(-30% 100% -30% 0)' : 'inset(-30% 0 -30% 100%)', transform: `translateX(${-14 * dir}px)`, opacity: 1 },
                 { clipPath: 'inset(-30% 0 -30% 0)', transform: 'translateX(0px)', opacity: 1 },
-            ], { duration: 150, delay, easing: 'cubic-bezier(.2, .9, .1, 1)' });
+            ], { duration: 320, delay, easing: 'cubic-bezier(.2, .9, .1, 1)' });
         });
 
         // 途中で画面の大きさが変わったら、位置がずれるので最後の形まで飛ばす
@@ -1073,9 +1073,9 @@
     /* ----------------------------------------------------------------------
        テレビ: トップの目次。つまみでチャンネルを替えると、W と S の砂嵐をはさんで番組が変わる。
        画面を押すと、番組がテレビの枠から全面に広がって、その画面に入る。
-       パソコンでは番組表にカーソルを合わせると試し見になり、押すと入る。
-       スマホ(カーソルがない)では、番組表を押すとチャンネルが替わってからそのまま入る。
-       テレビの画面を左右にスワイプしてもチャンネルが替わる
+       チャンネルは、つまみ・ホイール・矢印キー・数字キーで替える。スマホではテレビの画面を左右にスワイプする。
+       番組表は画面に出さない(読み上げ用。キーボードで入ったときだけ見える)。そこで選ぶとチャンネルが替わってからそのまま入る。
+       最初に電源が入ったときだけ、つまみがピクピクッと揺れる(カーソルを合わせたときと同じ動き)
        ---------------------------------------------------------------------- */
     const tv = (() => {
         const tvEl = $('.tv');
@@ -1715,6 +1715,17 @@
             if (RM) paint();
         }
 
+        // 最初に電源が入ったら、つまみを一度だけピクピクッと揺らして、回せることをそれとなく伝える
+        let hinted = false;
+        function hint() {
+            if (hinted || RM) return;
+            hinted = true;
+            setTimeout(() => {
+                knob.classList.add('is-hint');
+                knob.addEventListener('animationend', () => knob.classList.remove('is-hint'), { once: true });
+            }, 1900); // 先に画面へ目が行くので、少し間をおいてから
+        }
+
         function powerOn(then) {
             if (on) return;
             const done = () => {
@@ -1722,6 +1733,7 @@
                 on = true;
                 tune(ch);
                 if (typeof then === 'function') then();
+                else hint();
             };
             if (RM) {
                 done();
@@ -2083,7 +2095,7 @@
                 const ang = Math.atan2(ty - cy, tx - cx) + rand(-.9, .9), d = rand(.18, .6) * far;
                 ps.push({
                     tx, ty, sx: tx + Math.cos(ang) * d, sy: ty + Math.sin(ang) * d,
-                    a: level[i], k: Math.random() < .5 ? 0 : 1, delay: rand(0, 260), dur: rand(420, 580),
+                    a: level[i], k: Math.random() < .5 ? 0 : 1, delay: rand(0, 520), dur: rand(850, 1150),
                 });
             }
 
@@ -2111,7 +2123,7 @@
 
             const fly = bezier(.7, 0, .2, 1); // 溜めて、一気に寄って、ピタッと止まる(ロゴの W と同じ調子)
             const sweep = bezier(.45, 0, .55, 1);
-            const GATHER = ps.reduce((mx, p) => Math.max(mx, p.delay + p.dur), 0), HOLD = 170, SCAN = 360;
+            const GATHER = ps.reduce((mx, p) => Math.max(mx, p.delay + p.dur), 0), HOLD = 320, SCAN = 700;
             const t0 = performance.now();
             let raf = 0, shown = false, ended = false;
 
@@ -2193,6 +2205,7 @@
             $$('[data-bot-word]').forEach((el) => { el.textContent = lines[0]; });
             $$('[data-bot-yomi]').forEach((el) => { el.textContent = lines.slice(1).join(' '); });
             $('.post-meta', box).textContent = `長い言葉bot · ${ago}`;
+            $$('[data-bot-ago]').forEach((el) => { el.textContent = ago; });
             box.href = `https://bsky.app/profile/${handle}/post/${post.uri.split('/').pop()}`;
         } catch (err) {
             // 読めないときは投稿の例を出したままにする
@@ -2230,11 +2243,11 @@
                     setTimeout(tv.powerOn, 400);
                     return;
                 }
-                // W が分かれて文字がそろう間際に、ほかの部品(メニュー・番組表)をパンと出す
+                // W が分かれて文字がそろったら、一拍おいてほかの部品(メニュー・番組表)をパンと出す
                 const seq = wordIn();
                 const tvEl = $('.tv');
                 const rest = stagger(partsOf(containers).filter((p) => p.kind !== 'glyph' && p.el !== tvEl), .03);
-                // テレビは、ほかの部品が出るのと同時に文字から組み上がる。
+                // テレビは、ロゴがそろって一拍おいてから、ほかの部品が出るのと同時に文字から組み上がる。
                 // 組み上がって電源が入ったら、もう移動できるようにする(文字の後片付けはそのあと)
                 after = new Promise((done) => setTimeout(() => {
                     const assembled = assembleTv();
@@ -2244,7 +2257,7 @@
                         setTimeout(tv.powerOn, RM ? 0 : 250);
                         done();
                     });
-                }, seq.total - 120));
+                }, seq.total + 250)); // ロゴがそろって一拍おいてから
             },
         }).then(() => after).then(() => { busy = false; });
     }

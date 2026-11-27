@@ -1156,7 +1156,6 @@
             r.aborted = true;
             cancelAnimationFrame(r.raf);
             detach();
-            if (r.ungate) r.ungate();
             if (r.hush) r.hush(.08);
             if (!r.swapped) {
                 r.swapped = true;
@@ -1170,34 +1169,6 @@
             }
             wrap.classList.add('is-fading', 'is-skipped');
             setTimeout(finish, 460);
-        }
-
-        // 音を入れている人が開き直したとき、まだ音を出せなければ(ブラウザは押すまで出させない)、押すまで待つ。
-        // 押す(Enter・Space も)と音付きで導入が始まる。スキップのボタン・ほかのキー・ホイールは、今までどおりスキップ
-        function gate(r) {
-            const g = $('[data-fx-gate]', wrap);
-            if (!g || !sfx.on || sfx.state === 'running' || run !== r || r.aborted) return Promise.resolve();
-            return new Promise((done) => {
-                const hold = (e) => e.stopPropagation(); // 包みの pointerdown(スキップ)まで届かせない
-                const key = (e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); };
-                const close = () => {
-                    g.hidden = true;
-                    g.removeEventListener('pointerdown', hold);
-                    g.removeEventListener('keydown', key);
-                    g.removeEventListener('click', start);
-                    r.ungate = null;
-                };
-                const start = () => {
-                    close();
-                    done();
-                };
-                r.ungate = close;
-                g.hidden = false;
-                g.addEventListener('pointerdown', hold);
-                g.addEventListener('keydown', key);
-                g.addEventListener('click', start);
-                g.focus({ preventScroll: true });
-            });
         }
 
         function play(opts) {
@@ -1226,7 +1197,7 @@
                         ])).catch(() => {}) : null,
                         sfx.ready(250),
                     ]);
-                    Promise.race([wait, new Promise((res) => setTimeout(res, 1200))]).then(() => gate(r)).then(() => begin(r));
+                    Promise.race([wait, new Promise((res) => setTimeout(res, 1200))]).then(() => begin(r));
                 } else {
                     begin(r);
                 }

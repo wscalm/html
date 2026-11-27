@@ -616,7 +616,7 @@
         snow,
         ready,
         get on() { return on; },
-        get state() { return ctx ? ctx.state : 'none'; }, // 音の出口の状態(導入の「押すと始まる」で使う)
+        get state() { return ctx ? ctx.state : 'none'; }, // 確かめる用
         voices: V, // 試し聴き用(OfflineAudioContext に書き出して確かめる)
         masterOf,
     };

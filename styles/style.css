@@ -491,15 +491,6 @@ button {
     text-overflow: ellipsis;
 }
 
-.tv-bar {
-    display: inline-block;
-    width: var(--w);
-    height: .9em;
-    margin-right: .4em;
-    vertical-align: -.1em;
-    background: #e9e9e9;
-}
-
 /* ボット・SNS: アプリの画面を見ている感じ(プロダクトのスクリーンショットと同じく明るい画面) */
 .tv-app {
     background: #f1f1ef;
@@ -1400,6 +1391,111 @@ button {
     color: var(--faint);
 }
 
+/* 使っているもの(技術)。見出しは日本語の小さな一行、表は罫線だけ */
+.stack {
+    margin-top: 28px;
+}
+
+.stack-head {
+    font-size: 12px;
+    color: var(--faint);
+}
+
+.stack-list {
+    margin-top: 8px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.stack-list > div {
+    display: grid;
+    grid-template-columns: 6.5em minmax(0, 1fr);
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.stack-list > div[hidden] {
+    display: none;
+}
+
+.stack-list dt {
+    color: var(--faint);
+}
+
+.stack-list dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    color: var(--ink);
+}
+
+/* 技術の名前と、そのロゴ(白黒) */
+.tech {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.tech-icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    fill: var(--c, currentColor);
+}
+
+/* 小さな画像しかないもの(math.js・decimal.js)は、それをもとにした文字の札。ロゴと同じ大きさ。
+   文字の白いふち([data-quiet])は、札の中ではにじんで見えるので付けない */
+.tech-badge {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    text-shadow: none;
+    letter-spacing: 0;
+}
+
+/* math.js: 赤みのオレンジの四角に白い m */
+.tech-badge--mathjs {
+    background: #dc3912;
+    color: #fff;
+    font: 700 14px / 1 'Source Sans 3', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    padding-bottom: 2px;
+}
+
+/* decimal.js: 等幅の d と赤い点(ロゴの decimal.js の書き方から) */
+.tech-badge--decimaljs {
+    color: #111;
+    font: 700 14px / 1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+.tech-badge--decimaljs i {
+    font-style: normal;
+    color: #e00;
+}
+
+.tech-note {
+    flex-basis: 100%;
+    font-size: 12px;
+    color: var(--sub);
+}
+
+.stack-aside {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.9;
+    color: var(--sub);
+}
+
+.stack + .visit {
+    margin-top: 24px;
+}
+
 .visit {
     display: inline-flex;
     align-items: center;
@@ -1489,10 +1585,19 @@ button {
 /* ==========================================================================
    テレビの中の画面(プロダクト・ボット・経歴・SNS)
    トップのテレビと同じ部品でそろえる: 黒い縁の小さな画面、走査線とガラスの映りこみ、
-   端末の画面(Ubuntu の色)、W と S のドット。背景の W と S は、文字の下だけ薄くする(data-quiet)
+   端末の画面(Ubuntu の色)、W と S のドット。背景の W と S は、文字の下では動かさず、文字に白いふちを付けて分ける(data-quiet)
    ========================================================================== */
 
 /* ドットのアイコンの元(<symbol>)。見えない所に置く */
+/* 背景の W と S の上に載る文字。字の形に沿った細い白いふちで、後ろの文字と分ける */
+[data-quiet] {
+    text-shadow:
+        0 0 1px #fff,
+        0 0 2px #fff,
+        0 0 3px #fff,
+        0 0 6px #fff;
+}
+
 .sprite {
     position: absolute;
     width: 0;
@@ -1856,6 +1961,11 @@ button {
 
 .tl-out {
     color: #d6d6d6;
+}
+
+/* 端末のコメント行(# ...) */
+.tl-comment {
+    color: #8f8f8f;
 }
 
 .term-name {

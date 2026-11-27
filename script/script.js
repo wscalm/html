@@ -77,7 +77,7 @@
         const BASE = .045; // ふだんの濃さ
         const NEAR = .12; // 山頂で足す濃さ
         const RIPS = 8; // 同時に広がる波の数
-        const QN = 24; // 文字の下を静かにする四角の数の上限(data-quiet)
+        const QN = 64; // 丘と波を止める四角(行ごと)の数の上限(data-quiet)
         const T0 = performance.now();
         // ほとんど止まっている絵なので、描いた内容を保つ(見えない間に描いた分が消えないように)
         const gl = cvs.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: true });
@@ -108,22 +108,24 @@
             attribute vec2 a_pos;
             attribute vec3 a_cor;
             uniform vec2 u_res, u_mouse;
-            uniform float u_aim, u_lift, u_half, u_r, u_time;
+            uniform float u_aim, u_lift, u_half, u_r, u_time, u_cell;
             uniform vec4 u_rip[${RIPS}];
             uniform vec4 u_q[${QN}];
             uniform float u_qn;
             varying vec2 v_uv;
             varying float v_a;
             void main() {
-                // 文字の下(静かにする四角の中)では、W と S を薄くし、丘も波も立てない。縁はなだらかに
-                float qz = 0.0;
+                // 文字の行(静かにする四角)の下でも W と S は途切れさせない(白い板のように抜くと、そこだけ浮く)。
+                // 代わりに丘と波を止めて、いつもの薄さのまま動かさない。文字との境は CSS の白いふちで分ける
+                float sdm = 1e5;
                 for (int i = 0; i < ${QN}; i++) {
                     if (float(i) >= u_qn) break;
                     vec4 b = u_q[i];
                     vec2 e = abs(a_pos - (b.xy + b.zw) * 0.5) - (b.zw - b.xy) * 0.5;
-                    float sd = length(max(e, 0.0)) + min(max(e.x, e.y), 0.0);
-                    qz = max(qz, 1.0 - smoothstep(0.0, 30.0, sd));
+                    sdm = min(sdm, length(max(e, 0.0)) + min(max(e.x, e.y), 0.0));
                 }
+                // 丘と波は、行の 3 マスほど手前からなだらかに収める(濃く大きくなった文字が行にかからないように)
+                float qz = 1.0 - smoothstep(0.0, u_cell * 3.0, sdm);
                 vec2 d = a_pos - u_mouse;
                 // なだらかな丘(0〜1)。カーソルの真下がいちばん高い
                 float h = exp(-dot(d, d) / (u_r * u_r)) * u_lift * (1.0 - qz);
@@ -142,14 +144,14 @@
                     push += e / max(dist, 0.001) * wi;
                 }
                 w = min(w, 1.0) * (1.0 - qz);
-                vec2 p = a_pos + d * h * 0.08 + push * 3.0;
+                vec2 p = a_pos + d * h * 0.08 + push * 3.0 * (1.0 - qz);
                 vec2 to = u_mouse - p;
                 vec2 dir = normalize(mix(vec2(0.0, -1.0), to / max(length(to), 0.001), u_aim) + vec2(0.0, -0.0001));
                 vec2 c = a_cor.xy * u_half * (1.0 + 0.2 * h + 0.18 * w);
                 vec2 q = p + vec2(-dir.y * c.x - dir.x * c.y, dir.x * c.x - dir.y * c.y);
                 gl_Position = vec4(q.x / u_res.x * 2.0 - 1.0, 1.0 - q.y / u_res.y * 2.0, 0.0, 1.0);
                 v_uv = vec2((a_cor.z + a_cor.x * 0.5 + 0.5) * 0.5, a_cor.y * 0.5 + 0.5);
-                v_a = clamp(${BASE.toFixed(3)} + ${NEAR.toFixed(3)} * h + 0.07 * w, 0.0, 1.0) * (1.0 - 0.88 * qz);
+                v_a = clamp(${BASE.toFixed(3)} + ${NEAR.toFixed(3)} * h + 0.07 * w, 0.0, 1.0) * (1.0 - 0.25 * qz);
             }`;
         const FS = `
             precision mediump float;
@@ -165,6 +167,48 @@
         const rip = new Float32Array(RIPS * 4), qbuf = new Float32Array(QN * 4);
         const st = { seen: false, mx: 0, my: 0, tx: 0, ty: 0, aim: 0, aimT: 0, lift: 0, liftT: 0, lx: 0, ly: 0, acc: 0, lastEmit: 0 };
 
+        // カーソルのない端末(スマホなど)では、見えないカーソルが画面の中をゆっくりさまよって、
+        // 丘と波をひとりでに立てる。指で触っている間は指に従い、離して少したつと、その場からまたさまよう。
+        // 電池のため、さまよっている間は 30 コマ/秒で描く
+        const AUTO = !RM && matchMedia('(hover: none)').matches;
+        const wander = { on: false, x: 0, y: 0, vx: 0, vy: 0, gx: 0, gy: 0, nextGoal: 0, nextRip: 0, resume: 0 };
+        function wanderStep(now, dt) {
+            const w = wander;
+            if (!w.on) {
+                w.on = true;
+                w.x = st.seen ? st.mx : innerWidth * (.3 + Math.random() * .4);
+                w.y = st.seen ? st.my : innerHeight * (.3 + Math.random() * .4);
+                w.vx = w.vy = 0;
+                w.nextGoal = 0;
+                w.nextRip = now + 800 + Math.random() * 1200;
+                if (!st.seen) {
+                    st.seen = true;
+                    st.mx = st.tx = w.x;
+                    st.my = st.ty = w.y;
+                }
+            }
+            // ときどき行き先を変え、そちらへゆるく舵を切る(まっすぐ行かず、弧を描く)
+            if (now > w.nextGoal || Math.hypot(w.gx - w.x, w.gy - w.y) < 40) {
+                w.gx = innerWidth * (.1 + Math.random() * .8);
+                w.gy = innerHeight * (.1 + Math.random() * .8);
+                w.nextGoal = now + 4000 + Math.random() * 4000;
+            }
+            const dx = w.gx - w.x, dy = w.gy - w.y, dist = Math.hypot(dx, dy) || 1;
+            const SPEED = 70; // px/秒
+            w.vx += ((dx / dist) * SPEED - w.vx) * Math.min(1, dt * .8);
+            w.vy += ((dy / dist) * SPEED - w.vy) * Math.min(1, dt * .8);
+            w.x += w.vx * dt;
+            w.y += w.vy * dt;
+            st.tx = w.x;
+            st.ty = w.y;
+            st.aimT = 1;
+            st.liftT = .85;
+            if (now > w.nextRip) {
+                emit(w.x, w.y, .16 + Math.random() * .16);
+                w.nextRip = now + 1400 + Math.random() * 2200;
+            }
+        }
+
         function init() {
             const sh = (type, src) => {
                 const s = gl.createShader(type);
@@ -178,7 +222,7 @@
             gl.linkProgram(prog);
             if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
             gl.useProgram(prog);
-            ['u_res', 'u_mouse', 'u_aim', 'u_lift', 'u_half', 'u_r', 'u_time', 'u_rip', 'u_tex', 'u_q', 'u_qn'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+            ['u_res', 'u_mouse', 'u_aim', 'u_lift', 'u_half', 'u_r', 'u_time', 'u_rip', 'u_tex', 'u_q', 'u_qn', 'u_cell'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
             buf = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             const aPos = gl.getAttribLocation(prog, 'a_pos'), aCor = gl.getAttribLocation(prog, 'a_cor');
@@ -244,6 +288,7 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
             gl.uniform1f(U.u_half, cell / 2);
+            gl.uniform1f(U.u_cell, cell);
             gl.uniform1f(U.u_r, clamp(Math.min(W, H) * .26, 120, 220)); // 丘の広さ
             draw();
         }
@@ -264,8 +309,14 @@
         }
 
         function frame(now) {
+            const wandering = AUTO && now > wander.resume;
+            if (wandering && now - last < 30) {
+                raf = requestAnimationFrame(frame);
+                return;
+            }
             const dt = Math.min(.05, (now - last) / 1000 || .016);
             last = now;
+            if (wandering) wanderStep(now, dt);
             // 丘はカーソルに少し遅れてなめらかについてくる
             const k = RM ? 1 : 1 - Math.exp(-dt * 10);
             st.mx += (st.tx - st.mx) * k;
@@ -275,7 +326,7 @@
             draw();
             const settled = Math.abs(st.tx - st.mx) < .2 && Math.abs(st.ty - st.my) < .2
                 && Math.abs(st.aimT - st.aim) < .002 && Math.abs(st.liftT - st.lift) < .002;
-            raf = settled && now > alive ? 0 : requestAnimationFrame(frame);
+            raf = settled && now > alive && !AUTO ? 0 : requestAnimationFrame(frame);
         }
 
         const kick = () => {
@@ -294,6 +345,10 @@
         // 動かした距離がたまるごとに、速さに応じた強さの波をひとつ出す(ゆっくりなら弱く、止まれば出ない)
         function point(e) {
             const x = e.clientX, y = e.clientY, now = performance.now();
+            if (AUTO) {
+                wander.on = false;
+                wander.resume = Infinity; // 指を離すまで、さまよわない
+            }
             if (!st.seen) {
                 st.seen = true;
                 st.mx = st.lx = x;
@@ -320,19 +375,67 @@
             kick();
         };
 
-        // 静かにする四角を測り直す。els は文字のまとまり(見出し・本文・メニューなど)。少し外まで広げる
+        // 静かにする四角を測り直す。els は文字のまとまり(見出し・本文・メニューなど)。
+        // まとまりの外枠ではなく、行ごと(画像やアイコンはその形)に測る。行のない余白では丘も波も立つ
+        const lineRects = (el) => {
+            const out = [];
+            const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+                acceptNode: (n) => {
+                    if (n.nodeType === 3) return n.data.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                    if (n.closest('.sr-only, [hidden]')) return NodeFilter.FILTER_REJECT;
+                    return /^(IMG|SVG|CANVAS|svg)$/.test(n.tagName) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                },
+            });
+            const range = document.createRange();
+            for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+                if (n.nodeType === 3) {
+                    range.selectNodeContents(n);
+                    out.push(...range.getClientRects());
+                } else out.push(n.getBoundingClientRect());
+            }
+            return out.filter((r) => r.width && r.height);
+        };
+        // 同じ行で近いものはひとつにまとめる
+        const mergeRects = (rs, gap) => {
+            const out = [];
+            for (const r of [...rs].sort((a, b) => a.top - b.top || a.left - b.left)) {
+                const m = out.find((o) => Math.min(o.b, r.bottom) - Math.max(o.t, r.top) > Math.min(o.b - o.t, r.height) * .5
+                    && r.left - o.r < gap && o.l - r.right < gap);
+                if (m) {
+                    m.l = Math.min(m.l, r.left);
+                    m.t = Math.min(m.t, r.top);
+                    m.r = Math.max(m.r, r.right);
+                    m.b = Math.max(m.b, r.bottom);
+                } else out.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+            }
+            return out;
+        };
         let quietEls = () => [];
         function quiet(fn) {
             if (fn) quietEls = fn;
             if (!gl) return;
+            const cell = cellSize(), px = cell * .7, py = cell * .4;
+            const els = quietEls().filter((el) => {
+                if (!el) return false;
+                const r = el.getBoundingClientRect();
+                return r.width && r.height && r.bottom > -60 && r.top < innerHeight + 60;
+            });
+            const groups = els.map((el) => mergeRects(lineRects(el), cell * 1.5));
+            // 数が上限を超えるときは、大きいまとまりから外枠ひとつにまとめる
+            let total = groups.reduce((n, g) => n + g.length, 0);
+            const order = groups.map((g, i) => i).sort((a, b) => groups[b].length - groups[a].length);
+            for (const i of order) {
+                if (total <= QN) break;
+                const g = groups[i];
+                if (g.length < 2) continue;
+                total -= g.length - 1;
+                groups[i] = [g.reduce((a, o) => ({ l: Math.min(a.l, o.l), t: Math.min(a.t, o.t), r: Math.max(a.r, o.r), b: Math.max(a.b, o.b) }))];
+            }
             qn = 0;
             qbuf.fill(0);
-            for (const el of quietEls()) {
+            for (const o of groups.flat()) {
                 if (qn >= QN) break;
-                const r = el.getBoundingClientRect();
-                if (!r.width || !r.height || r.bottom < -60 || r.top > innerHeight + 60) continue;
-                const pad = 8;
-                qbuf.set([r.left - pad, r.top - pad, r.right + pad, r.bottom + pad], qn * 4);
+                qbuf.set([o.l - px, o.t - py, o.r + px, o.b + py], qn * 4);
                 qn++;
             }
             if (prog) kick();
@@ -343,8 +446,13 @@
         addEventListener('pointerdown', point, { passive: true });
         // ウィンドウの外へ出たとき、指を離したとき(タッチにはカーソルが残らないため)は丘を下げる
         document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) lower(); });
-        addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') lower(); }, { passive: true });
-        addEventListener('pointercancel', lower, { passive: true });
+        // さまよう端末では、指を離して少したったら、その場からまたさまよう
+        const release = () => {
+            if (AUTO) wander.resume = performance.now() + 1800;
+            lower();
+        };
+        addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') release(); }, { passive: true });
+        addEventListener('pointercancel', release, { passive: true });
         cvs.addEventListener('webglcontextlost', (e) => {
             e.preventDefault();
             cancelAnimationFrame(raf);
@@ -356,6 +464,7 @@
         });
 
         build();
+        if (AUTO) kick();
         if (document.fonts) {
             document.fonts.load(`600 52px "Inter Tight"`, 'WS').then(() => {
                 atlas();
@@ -2410,6 +2519,12 @@
 
     $$('[data-tabs]').forEach((list) => {
         const tabs = $$('[role="tab"]', list);
+        // 使っているもの: 版によって違う行(data-gen)は、選んだ版の分だけ出す
+        const genRows = (tab) => {
+            const v = $('.gen-v', tab)?.textContent.trim();
+            const body = list.closest('.work-body');
+            if (v && body) $$('[data-gen]', body).forEach((row) => { row.hidden = !row.dataset.gen.split(' ').includes(v); });
+        };
         const select = (tab, focus) => {
             tabs.forEach((t) => {
                 const on = t === tab;
@@ -2419,9 +2534,12 @@
                 panel.hidden = !on;
                 if (on) flicker($('.media', panel));
             });
+            genRows(tab);
             if (focus) tab.focus();
         };
         tabs.forEach((tab) => tab.addEventListener('click', () => select(tab)));
+        const initial = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
+        if (initial) genRows(initial);
         list.addEventListener('keydown', (e) => {
             const i = tabs.indexOf(document.activeElement);
             if (i < 0) return;
